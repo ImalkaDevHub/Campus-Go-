@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Image, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
-  Tag, ChevronRight, User, Bell
+  Tag, ChevronRight, User, Bell, Search, Calendar, Clock, Users
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';

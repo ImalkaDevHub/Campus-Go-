@@ -1,5 +1,12 @@
-// Use your local IP address so physical devices can connect to the local server
-export const API_BASE_URL = 'http://192.168.1.102:8080/api';
+import { Platform } from 'react-native';
+
+// 1. On your computer, open CMD and type 'ipconfig'. 
+// 2. Find your "IPv4 Address" (e.g., 192.168.1.105) and put it here:
+const DEV_IP = '192.168.1.102'; 
+
+export const API_BASE_URL = Platform.OS === 'web' 
+  ? 'http://localhost:8080/api' 
+  : `http://${DEV_IP}:8080/api`;
 
 export const ENDPOINTS = {
   COURSES: `${API_BASE_URL}/courses`,

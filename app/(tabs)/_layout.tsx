@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Home, BookOpen, User, LayoutDashboard, FileText } from 'lucide-react-native';
+import { Home, BookOpen, User, LayoutDashboard, FileText, Calendar } from 'lucide-react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';

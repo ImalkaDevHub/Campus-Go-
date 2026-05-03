@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, Dimensions, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Modal } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, Dimensions, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Modal, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Lock, Eye, EyeOff, GraduationCap, ChevronRight } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, Link } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 import { ENDPOINTS, API_BASE_URL } from '@/constants/config';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Helper for Web compatibility
+const saveToken = async (key: string, value: string) => {
+  if (Platform.OS === 'web') {
+    localStorage.setItem(key, value);
+  } else {
+    await SecureStore.setItemAsync(key, value);
+  }
+};
 
 export default function LoginScreen() {
   const [role, setRole] = useState<'student' | 'admin'>('student');
@@ -37,7 +46,10 @@ export default function LoginScreen() {
       
       const response = await axios.post(
         `${API_BASE_URL}/auth/login`,
-        { email, password },
+        { 
+          email: email.trim().toLowerCase(), 
+          password: password.trim() 
+        },
         { 
           timeout: 10000,
           headers: { 'Content-Type': 'application/json' }
@@ -45,8 +57,8 @@ export default function LoginScreen() {
       );
 
       const { token, user } = response.data;
-      await SecureStore.setItemAsync('userToken', token);
-      await SecureStore.setItemAsync('userData', JSON.stringify(user));
+      await saveToken('userToken', token);
+      await saveToken('userData', JSON.stringify(user));
 
       const staffRoles = [
         'super_admin', 
@@ -63,11 +75,18 @@ export default function LoginScreen() {
       }
 
     } catch (err: any) {
-      console.error('Login Error:', err);
+      console.log('DEBUG:', err.code, err.message);
       let msg = 'An unexpected error occurred';
-      if (err.code === 'ERR_NETWORK') msg = `Cannot connect to server at ${API_BASE_URL}. Make sure you are on the same WiFi network and your computer's IP is correct.`;
-      else if (err.response?.status === 401) msg = 'Invalid email or password';
-      else if (err.response?.status === 404) msg = 'Account not found';
+      if (err.code === 'ERR_NETWORK') {
+        msg = `Cannot connect to server at ${API_BASE_URL}. Make sure you are on the same WiFi network.`;
+      }
+      else if (err.response?.status === 401 || err.code === 'ERR_BAD_REQUEST' && err.response?.status === 401) {
+        msg = 'Invalid email or password. Please check your credentials.';
+      }
+      else if (err.response?.status === 404) {
+        msg = 'Account not found. Please register first.';
+      }
+      
       setError(msg);
       Alert.alert('Login Failed', msg);
     } finally {
@@ -190,7 +209,15 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
             
-            <View style={{ height: 40 }} />
+            <Link href="/register" asChild>
+              <TouchableOpacity style={styles.loginLink}>
+                <Text style={styles.loginLinkText}>
+                  Don't have an account? <Text style={{ color: '#4F46E5' }}>Register</Text>
+                </Text>
+              </TouchableOpacity>
+            </Link>
+            
+            <View style={{ height: 20 }} />
           </View>
         </KeyboardAvoidingView>
       </ScrollView>
@@ -424,5 +451,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '800',
+  },
+  loginLink: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loginLinkText: {
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
