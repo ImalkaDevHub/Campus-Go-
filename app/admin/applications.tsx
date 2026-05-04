@@ -82,7 +82,17 @@ export default function AdminApplicationsList() {
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.card}
-      onPress={() => router.push(`/admin/application-review/${item._id || item.id}`)}
+      onPress={() => {
+        const id = item._id || item.id;
+        if (id) {
+          router.push({
+            pathname: "/admin/application-review/[id]",
+            params: { id: id }
+          });
+        } else {
+          Alert.alert('Error', 'Invalid Application ID');
+        }
+      }}
     >
       <View style={styles.cardHeader}>
         <View style={styles.userRow}>
