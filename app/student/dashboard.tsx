@@ -106,11 +106,13 @@ export default function StudentDashboard() {
   }
 
   const getStatusStyle = (status: string) => {
-    switch(status?.toLowerCase()) {
-      case 'approved': return { bg: '#065f46', text: '#34d399' };
-      case 'rejected': return { bg: '#7f1d1d', text: '#f87171' };
-      case 'pending': return { bg: '#78350f', text: '#fbbf24' };
-      default: return { bg: '#1e293b', text: '#94a3b8' };
+    switch(status?.toUpperCase()) {
+      case 'APPROVED': return { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', icon: CheckCircle };
+      case 'REJECTED': return { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', icon: XCircle };
+      case 'PENDING': return { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: Clock };
+      case 'UNDER REVIEW': return { bg: 'rgba(59, 130, 246, 0.1)', text: '#3b82f6', icon: Info };
+      case 'UPDATES REQUESTED': return { bg: 'rgba(139, 92, 246, 0.1)', text: '#8b5cf6', icon: RefreshCw };
+      default: return { bg: '#1e293b', text: '#94a3b8', icon: Clock };
     }
   };
 
@@ -173,26 +175,51 @@ export default function StudentDashboard() {
         {/* Section: My Applications */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Application Status</Text>
-            <TouchableOpacity><Text style={styles.viewAll}>View History</Text></TouchableOpacity>
+            <Text style={styles.sectionTitle}>Application Progress</Text>
+            <TouchableOpacity onPress={() => router.push('/application-status')}><Text style={styles.viewAll}>Track All</Text></TouchableOpacity>
           </View>
           
-          {stats.applications.length > 0 ? stats.applications.map((app: any, idx) => (
-            <View key={app._id || idx} style={styles.card}>
-              <View style={styles.cardInfo}>
-                <FileText size={20} color="#4F46E5" />
-                <View style={styles.textGroup}>
-                  <Text style={styles.cardTitle}>{app.courseName || 'General Application'}</Text>
-                  <Text style={styles.cardSub}>Ref: #{app._id?.substring(0, 8).toUpperCase()}</Text>
+          {stats.applications.length > 0 ? stats.applications.map((app: any, idx) => {
+            const style = getStatusStyle(app.status);
+            const StatusIcon = style.icon;
+            
+            return (
+              <View key={app._id || idx} style={styles.appCard}>
+                <View style={styles.appCardHeader}>
+                  <View style={styles.cardInfo}>
+                    <FileText size={20} color="#4F46E5" />
+                    <View style={styles.textGroup}>
+                      <Text style={styles.cardTitle}>{app.courseName || 'General Application'}</Text>
+                      <Text style={styles.cardSub}>Ref: #{app._id?.substring(0, 8).toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.statusChip, { backgroundColor: style.bg }]}>
+                    <StatusIcon size={12} color={style.text} style={{ marginRight: 4 }} />
+                    <Text style={[styles.statusText, { color: style.text }]}>
+                      {app.status?.toUpperCase() || 'PENDING'}
+                    </Text>
+                  </View>
                 </View>
+
+                {app.adminComments && (
+                  <View style={styles.feedbackBox}>
+                    <MessageSquare size={14} color="#64748b" />
+                    <Text style={styles.feedbackText}>{app.adminComments}</Text>
+                  </View>
+                )}
+
+                {app.status === 'UPDATES REQUESTED' && (
+                  <TouchableOpacity 
+                    style={styles.fixBtn}
+                    onPress={() => router.push(`/application-status?id=${app._id}`)}
+                  >
+                    <RefreshCw size={14} color="#fff" />
+                    <Text style={styles.fixBtnText}>Fix Issues & Re-submit</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              <View style={[styles.statusChip, { backgroundColor: getStatusStyle(app.status).bg }]}>
-                <Text style={[styles.statusText, { color: getStatusStyle(app.status).text }]}>
-                  {app.status?.toUpperCase() || 'PENDING'}
-                </Text>
-              </View>
-            </View>
-          )) : (
+            );
+          }) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyText}>No active applications</Text>
             </View>
@@ -410,6 +437,50 @@ const styles = StyleSheet.create({
   viewAll: {
     fontSize: 12,
     color: '#4F46E5',
+    fontWeight: '700',
+  },
+  appCard: {
+    backgroundColor: '#1e293b',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.03)',
+  },
+  appCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  feedbackBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 10,
+  },
+  feedbackText: {
+    flex: 1,
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+  fixBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4F46E5',
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  fixBtnText: {
+    color: '#fff',
+    fontSize: 13,
     fontWeight: '700',
   },
   card: {
