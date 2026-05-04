@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { 
   ArrowLeft, CheckCircle, XCircle, 
   ChevronDown, GraduationCap, Award, 
-  Calendar, Info 
+  Calendar, Info, BookOpen 
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';

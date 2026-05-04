@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, TextInput, Image,
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
-  User, Book, FileText, Upload, CheckCircle, 
+  User, Book, BookOpen, FileText, Upload, CheckCircle, 
   ChevronRight, ChevronLeft, Camera, 
   MapPin, GraduationCap, Calendar, 
   Briefcase, Edit3, Trash2, X, Info
@@ -32,9 +32,11 @@ const getToken = async () => {
 
 export default function ComprehensiveApplication() {
   const insets = useSafeAreaInsets();
+  const signatureRef = useRef<any>(null);
   const { courseId: paramCourseId } = useLocalSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
   const [courses, setCourses] = useState([]);
   
   // Form State
@@ -106,20 +108,44 @@ export default function ComprehensiveApplication() {
 
   const validateStep = () => {
     if (currentStep === 1) {
-      if (!formData.fullName || !formData.email || !formData.nic || !formData.mobileNumber) {
-        Alert.alert('Missing Info', 'Please fill in all personal details including NIC.');
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+      const mobileRegex = /^[0-9]{10}$/;
+
+      if (!formData.fullName.trim()) {
+        Alert.alert('Error', 'Please enter your full name as per NIC.');
+        return false;
+      }
+      if (!emailRegex.test(formData.email)) {
+        Alert.alert('Error', 'Please provide a valid email address.');
+        return false;
+      }
+      if (!nicRegex.test(formData.nic)) {
+        Alert.alert('Error', 'Invalid NIC format. (e.g., 123456789V or 12 digit format)');
+        return false;
+      }
+      if (!mobileRegex.test(formData.mobileNumber)) {
+        Alert.alert('Error', 'Please enter a valid 10-digit mobile number.');
+        return false;
+      }
+      if (!formData.address.trim()) {
+        Alert.alert('Error', 'Residential address is required.');
         return false;
       }
     }
     if (currentStep === 2) {
-      if (!formData.school || !formData.results) {
-        Alert.alert('Missing Info', 'Please provide your school name and results.');
+      if (!formData.school.trim() || !formData.results.trim()) {
+        Alert.alert('Error', 'Please provide your school/institution and your results.');
+        return false;
+      }
+      if (!formData.gradYear || isNaN(Number(formData.gradYear))) {
+        Alert.alert('Error', 'Please enter a valid completion year.');
         return false;
       }
     }
     if (currentStep === 3) {
       if (!formData.courseId) {
-        Alert.alert('Selection Required', 'Please select a program to continue.');
+        Alert.alert('Selection Required', 'Please select a program/course to continue.');
         return false;
       }
     }
@@ -127,7 +153,13 @@ export default function ComprehensiveApplication() {
       const required = ['nicFront', 'nicBack', 'birthCert', 'photo'];
       const missing = required.filter(d => !uploadedUrls[d]);
       if (missing.length > 0) {
-        Alert.alert('Wait', 'Please wait for all required documents to finish uploading.');
+        Alert.alert('Documents Missing', 'Please upload and wait for all required documents to finish.');
+        return false;
+      }
+    }
+    if (currentStep === 5) {
+      if (!formData.signature) {
+        Alert.alert('Signature Required', 'Please sign and click "Save Signature" before submitting.');
         return false;
       }
     }
@@ -257,43 +289,44 @@ export default function ComprehensiveApplication() {
     }
   };
 
-  const renderStepIndicator = () => (
-    <View style={styles.stepIndicator}>
-      {STEPS.map((step, index) => (
-        <React.Fragment key={step.id}>
-          <View style={styles.stepItem}>
-            <View style={[
-              styles.stepCircle, 
-              currentStep === step.id && styles.activeStepCircle,
-              currentStep > step.id && styles.completedStepCircle
-            ]}>
-              {currentStep > step.id ? (
-                <CheckCircle size={14} color="#fff" />
-              ) : (
-                <step.icon size={14} color={currentStep === step.id ? '#fff' : '#64748b'} />
-              )}
-            </View>
-            <Text style={[
-              styles.stepLabel,
-              currentStep === step.id && styles.activeStepLabel
-            ]}>{step.title}</Text>
-          </View>
-          {index < STEPS.length - 1 && (
-            <View style={[styles.stepLine, currentStep > step.id && styles.completedStepLine]} />
-          )}
-        </React.Fragment>
-      ))}
-    </View>
-  );
-
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Digital Application', headerTintColor: '#fff', headerStyle: { backgroundColor: '#0f172a' } }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={['#0f172a', '#1e293b']} style={StyleSheet.absoluteFill} />
+      
+      {/* Top Header & Step Indicator */}
+      <View style={[styles.stepHeader, { paddingTop: insets.top + 20 }]}>
+        <View style={styles.stepIndicator}>
+          {STEPS.map((step, index) => (
+            <React.Fragment key={step.id}>
+              <View style={styles.stepItem}>
+                <View style={[
+                  styles.stepCircle, 
+                  currentStep === step.id && styles.activeStepCircle,
+                  currentStep > step.id && styles.completedStepCircle
+                ]}>
+                  {currentStep > step.id ? (
+                    <CheckCircle size={14} color="#fff" />
+                  ) : (
+                    <step.icon size={14} color={currentStep === step.id ? '#fff' : '#64748b'} />
+                  )}
+                </View>
+                <Text style={[styles.stepLabel, currentStep === step.id && styles.activeStepLabel]}>{step.title}</Text>
+              </View>
+              {index < STEPS.length - 1 && (
+                <View style={[styles.stepLine, currentStep > step.id && styles.completedStepLine]} />
+              )}
+            </React.Fragment>
+          ))}
+        </View>
+      </View>
 
-      {renderStepIndicator()}
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={scrollEnabled}
+      >
         {currentStep === 1 && (
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Personal Details</Text>
@@ -436,15 +469,46 @@ export default function ComprehensiveApplication() {
             <Text style={styles.label}>Student Digital Signature</Text>
             <View style={styles.sigWrapper}>
               <Signature
+                ref={signatureRef}
                 onOK={handleSignature}
-                onEmpty={() => console.log('Empty')}
-                descriptionText="Sign your name inside the box"
-                clearText="Clear"
-                confirmText="Save Signature"
-                webStyle={`.m-signature-pad--footer { background-color: #f8fafc; border-top: 1px solid #e2e8f0; } .m-signature-pad--body { border: none; }`}
+                onBegin={() => setScrollEnabled(false)}
+                onEnd={() => setScrollEnabled(true)}
+                onEmpty={() => Alert.alert('Empty', 'Please provide a signature before saving.')}
+                descriptionText=""
                 autoClear={false}
                 imageType="image/png"
+                penColor="#000000"
+                backgroundColor="#ffffff"
+                webStyle={`
+                  .m-signature-pad { 
+                    box-shadow: none; border: none; 
+                  }
+                  .m-signature-pad--body {
+                    border: none;
+                  }
+                  .m-signature-pad--footer { 
+                    display: none; 
+                  }
+                `}
               />
+            </View>
+
+            <View style={styles.sigActions}>
+              <TouchableOpacity 
+                style={styles.sigBtnClear} 
+                onPress={() => signatureRef.current?.clearSignature()}
+              >
+                <Trash2 size={16} color="#ef4444" />
+                <Text style={styles.sigBtnClearText}>Clear</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.sigBtnSave} 
+                onPress={() => signatureRef.current?.readSignature()}
+              >
+                <CheckCircle size={16} color="#fff" />
+                <Text style={styles.sigBtnSaveText}>Capture & Save Signature</Text>
+              </TouchableOpacity>
             </View>
             
             {formData.signature ? (
@@ -453,7 +517,7 @@ export default function ComprehensiveApplication() {
                 <Text style={styles.sigConfirmedText}>Signature Captured Successfully</Text>
               </View>
             ) : (
-              <Text style={styles.sigHint}>You must Save Signature before submitting.</Text>
+              <Text style={styles.sigHint}>You must "Capture & Save" before submitting.</Text>
             )}
           </View>
         )}
@@ -489,7 +553,17 @@ export default function ComprehensiveApplication() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  stepIndicator: { flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: 'rgba(15, 23, 42, 0.5)' },
+  stepHeader: {
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingBottom: 20,
+  },
+  stepIndicator: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 24,
+  },
   stepItem: { alignItems: 'center', gap: 4 },
   stepCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#1e293b', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   activeStepCircle: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
@@ -532,6 +606,43 @@ const styles = StyleSheet.create({
   sigConfirmed: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, alignSelf: 'center' },
   sigConfirmedText: { color: '#10b981', fontWeight: '800', fontSize: 13 },
   sigHint: { textAlign: 'center', color: '#64748b', fontSize: 11, marginTop: 8, fontStyle: 'italic' },
+  sigActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  sigBtnClear: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+  },
+  sigBtnClearText: {
+    color: '#ef4444',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  sigBtnSave: {
+    flex: 2,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#10b981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  sigBtnSaveText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 14,
+  },
   footer: { flexDirection: 'row', padding: 20, backgroundColor: '#0f172a', gap: 12 },
   backBtn: { flex: 1, height: 56, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   backBtnText: { color: '#fff', fontWeight: '700' },

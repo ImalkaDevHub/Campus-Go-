@@ -132,7 +132,14 @@ export default function StudentDashboard() {
             <Text style={styles.nameText}>{user?.name || 'Student'}</Text>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconBtn}>
+            <TouchableOpacity 
+              style={styles.newAppBtn}
+              onPress={() => router.push('/new-application')}
+            >
+              <FileText size={18} color="#fff" />
+              <Text style={styles.newAppText}>Apply New</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/student/notifications')}>
               <Bell size={22} color="#fff" />
               {stats.notifications > 0 && <View style={styles.badge} />}
             </TouchableOpacity>
@@ -294,6 +301,21 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: 12,
+  },
+  newAppBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    marginRight: 4,
+  },
+  newAppText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   iconBtn: {
     width: 44,
