@@ -1,10 +1,5 @@
 
-// STEP 1: Find your IPv4 Address by running 'ipconfig' in CMD
-// STEP 2: Make sure Windows Firewall allows port 8080
-// STEP 3: Replace the IP below with your current IPv4
-const DEV_IP = '192.168.1.23'; 
-
-export const API_BASE_URL = `http://${DEV_IP}:8080/api`;
+export const API_BASE_URL = 'https://csbm-university-management-system.onrender.com/api';
 
 console.log('[CONFIG] API URL:', API_BASE_URL);
 
