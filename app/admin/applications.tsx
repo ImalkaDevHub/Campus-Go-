@@ -85,10 +85,7 @@ export default function AdminApplicationsList() {
       onPress={() => {
         const id = item._id || item.id;
         if (id) {
-          router.push({
-            pathname: "/admin/application-review/[id]",
-            params: { id: id }
-          });
+          router.push(`/admin/review-${id}`);
         } else {
           Alert.alert('Error', 'Invalid Application ID');
         }

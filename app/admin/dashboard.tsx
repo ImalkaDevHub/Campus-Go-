@@ -139,12 +139,27 @@ export default function AdminDashboard() {
             <Text style={styles.kpiLabel}>Students</Text>
           </View>
 
-          <View style={styles.kpiCard}>
-            <View style={[styles.iconCircle, { backgroundColor: 'rgba(6, 182, 212, 0.1)' }]}>
-              <Briefcase size={20} color="#06B6D4" />
+          <TouchableOpacity 
+            style={[styles.kpiCard, { backgroundColor: '#4F46E5' }]} 
+            onPress={() => router.push('/admin/registration-dashboard')}
+          >
+            <View style={[styles.iconCircle, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+              <TrendingUp size={20} color="#fff" />
             </View>
             <Text style={styles.kpiVal}>{kpis.pendingApps}</Text>
-            <Text style={styles.kpiLabel}>Pending</Text>
+            <Text style={[styles.kpiLabel, { color: 'rgba(255,255,255,0.8)' }]}>New Applications</Text>
+            <View style={styles.actionPrompt}>
+              <Text style={styles.actionPromptText}>Review Queue</Text>
+              <ChevronRight size={14} color="#fff" />
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.kpiCard}>
+            <View style={[styles.iconCircle, { backgroundColor: 'rgba(6, 182, 212, 0.1)' }]}>
+              <Users size={20} color="#06B6D4" />
+            </View>
+            <Text style={styles.kpiVal}>{kpis.totalStudents}</Text>
+            <Text style={styles.kpiLabel}>Total Enrolled</Text>
           </View>
         </View>
 
@@ -304,6 +319,17 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '600',
     marginTop: 4,
+  },
+  actionPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 4,
+  },
+  actionPromptText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#fff',
   },
   section: {
     marginTop: 40,
