@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -10,6 +10,12 @@ import {
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/constants/config';
+
+// Helper for Token
+const getToken = async () => {
+  if (Platform.OS === 'web') return localStorage.getItem('userToken');
+  return await SecureStore.getItemAsync('userToken');
+};
 
 export default function WorkshopRegistrations() {
   const { id } = useLocalSearchParams();
@@ -25,7 +31,7 @@ export default function WorkshopRegistrations() {
 
   const fetchData = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await getToken();
       const [regRes, workshopRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/workshop-registrations?workshop=${id}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -47,7 +53,7 @@ export default function WorkshopRegistrations() {
   const toggleAttendance = async (regId: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'Present' ? 'Absent' : 'Present';
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await getToken();
       
       await axios.put(`${API_BASE_URL}/workshop-registrations/${regId}/attendance`, {
         status: newStatus

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Share } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Share, Platform } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -13,6 +13,14 @@ import QRCode from 'react-native-qrcode-svg';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/constants/config';
+
+// Helper for Web compatibility
+const getToken = async () => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('userToken');
+  }
+  return await SecureStore.getItemAsync('userToken');
+};
 
 export default function WorkshopDetails() {
   const { id } = useLocalSearchParams();
@@ -42,12 +50,13 @@ export default function WorkshopDetails() {
 
   const checkRegistration = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await getToken();
       if (!token) return;
-      const response = await axios.get(`${API_BASE_URL}/workshop-registrations/my`, {
+      const response = await axios.get(`${API_BASE_URL}/workshops/my-registrations`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const reg = response.data.find((r: any) => (r.workshopId === id || r.workshop?._id === id));
+      const data = response.data?.data || response.data?.registrations || (Array.isArray(response.data) ? response.data : []);
+      const reg = data.find((r: any) => (r.workshopId === id || r.workshop?._id === id || r.workshop === id));
       if (reg) {
         setIsRegistered(true);
         setRegDetails(reg);
@@ -60,7 +69,7 @@ export default function WorkshopDetails() {
   const handleRegister = async () => {
     try {
       setRegistering(true);
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await getToken();
       if (!token) {
         Alert.alert('Login Required', 'Please login to register for workshops.', [
           { text: 'Login', onPress: () => router.push('/login') }
@@ -68,14 +77,14 @@ export default function WorkshopDetails() {
         return;
       }
 
-      const response = await axios.post(`${API_BASE_URL}/workshop-registrations`, {
+      const response = await axios.post(`${API_BASE_URL}/workshops/register`, {
         workshopId: id
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       setIsRegistered(true);
-      setRegDetails(response.data);
+      setRegDetails(response.data?.registration || response.data);
       Alert.alert('Success!', 'You have successfully registered for this workshop.');
     } catch (error: any) {
       console.error(error);
@@ -86,6 +95,7 @@ export default function WorkshopDetails() {
   };
 
   const handleShare = async () => {
+    if (!workshop) return;
     try {
       await Share.share({
         message: `Check out this workshop: ${workshop.title} at CampusGo!`,

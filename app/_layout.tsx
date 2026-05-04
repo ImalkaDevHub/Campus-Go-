@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, router } from 'expo-router';
+import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
@@ -9,8 +10,13 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // Global Logout Helper
 export const logout = async () => {
-  await SecureStore.deleteItemAsync('userToken');
-  await SecureStore.deleteItemAsync('userData');
+  if (Platform.OS === 'web') {
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userData');
+  } else {
+    await SecureStore.deleteItemAsync('userToken');
+    await SecureStore.deleteItemAsync('userData');
+  }
   router.replace('/login');
 };
 
@@ -18,22 +24,46 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    checkAuth();
+    // Small delay to ensure the root layout is mounted before navigating
+    const timer = setTimeout(() => {
+      checkAuth();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const checkAuth = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
-      if (token) {
-        // Token exists, go to dashboard
-        router.replace('/(tabs)');
+      let token = null;
+      if (Platform.OS === 'web') {
+        token = localStorage.getItem('userToken');
       } else {
-        // No token, go to login
-        router.replace('/login');
+        token = await SecureStore.getItemAsync('userToken');
+      }
+
+      if (token) {
+        const userDataStr = Platform.OS === 'web' ? localStorage.getItem('userData') : await SecureStore.getItemAsync('userData');
+        const user = userDataStr ? JSON.parse(userDataStr) : null;
+        
+        if (!user) {
+          // If token exists but user data is missing, clear token to prevent loop
+          if (Platform.OS === 'web') {
+            localStorage.removeItem('userToken');
+          } else {
+            await SecureStore.deleteItemAsync('userToken');
+          }
+          return;
+        }
+
+        const staffRoles = ['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'];
+
+        if (staffRoles.includes(user.role)) {
+          router.replace('/admin/dashboard');
+        } else {
+          router.replace('/student/dashboard');
+        }
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/login');
     }
   };
 

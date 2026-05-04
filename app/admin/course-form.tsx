@@ -67,8 +67,51 @@ export default function AdminCourseForm() {
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.code || !formData.fee) {
-      Alert.alert('Required Fields', 'Please fill in the course name, code, and fee.');
+    // 1. Basic Info Validation
+    if (!formData.name.trim()) {
+      Alert.alert('Validation Error', 'Course name is required.');
+      return;
+    }
+    if (!formData.code.trim()) {
+      Alert.alert('Validation Error', 'Course code is required.');
+      return;
+    }
+    if (!formData.description.trim() || formData.description.length < 20) {
+      Alert.alert('Validation Error', 'Please provide a more detailed description (min 20 characters).');
+      return;
+    }
+
+    // 2. Numerical Values
+    const fee = parseFloat(formData.fee);
+    if (isNaN(fee) || fee <= 0) {
+      Alert.alert('Validation Error', 'Course fee must be a positive number.');
+      return;
+    }
+    const credits = parseInt(formData.credits);
+    if (isNaN(credits) || credits <= 0) {
+      Alert.alert('Validation Error', 'Total credits must be a positive number.');
+      return;
+    }
+
+    // 3. Duration & Dates
+    if (!formData.duration.trim()) {
+      Alert.alert('Validation Error', 'Course duration is required.');
+      return;
+    }
+
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (formData.nextIntakeDate && !dateRegex.test(formData.nextIntakeDate)) {
+      Alert.alert('Validation Error', 'Next Intake Date must be in YYYY-MM-DD format.');
+      return;
+    }
+    if (formData.intakeDeadline && !dateRegex.test(formData.intakeDeadline)) {
+      Alert.alert('Validation Error', 'Intake Deadline must be in YYYY-MM-DD format.');
+      return;
+    }
+
+    // 4. Curriculum
+    if (formData.modules.length === 0) {
+      Alert.alert('Validation Error', 'Please add at least one module to the curriculum.');
       return;
     }
 

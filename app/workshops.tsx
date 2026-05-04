@@ -10,8 +10,19 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import { API_BASE_URL } from '@/constants/config';
 
 const { width } = Dimensions.get('window');
+
+// Helper for Web compatibility
+const getToken = async () => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('userToken');
+  }
+  return await SecureStore.getItemAsync('userToken');
+};
 
 const CATEGORIES = ['All', 'Workshops', 'Seminars', 'Technology', 'Leadership'];
 
@@ -38,18 +49,30 @@ export default function WorkshopsScreen() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const token = await getToken();
       
       // 1. Fetch workshops
-      const wsRes = await axios.get(ENDPOINTS.COURSES.replace('/courses', '/workshops')).catch(() => ({ data: [] }));
-      setWorkshops(Array.isArray(wsRes.data) ? wsRes.data : wsRes.data.workshops || []);
+      const wsRes = await axios.get(`${API_BASE_URL}/workshops`).catch(err => {
+        console.warn('Workshops fetch failed:', err.message);
+        return { data: [] };
+      });
+      
+      const workshopsData = wsRes.data?.data || wsRes.data?.workshops || (Array.isArray(wsRes.data) ? wsRes.data : []);
+      setWorkshops(workshopsData);
 
       // 2. Fetch my registrations
-      const regRes = await axios.get(`${ENDPOINTS.COURSES.replace('/courses', '/workshops')}/my-registrations`).catch(() => ({ data: [] }));
-      const ids = regRes.data.map((r: any) => r.workshop?._id || r.workshopId || r._id).filter(Boolean);
+      const regRes = await axios.get(`${API_BASE_URL}/workshopregistrations/my`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => ({ data: [] }));
+      
+      const regs = regRes.data?.data || regRes.data?.registrations || (Array.isArray(regRes.data) ? regRes.data : []);
+      const ids = regs.map((r: any) => r.workshopId || r.workshop?._id || r._id).filter(Boolean);
       setRegisteredIds(ids);
 
       // 3. Check application status
-      const appRes = await axios.get(`${ENDPOINTS.APPLICATIONS}/my-application`).catch(() => ({ data: null }));
+      const appRes = await axios.get(`${API_BASE_URL}/applications/my-application`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => ({ data: null }));
       if (appRes.data) {
         const status = appRes.data.status?.toUpperCase();
         setIsApproved(status === 'APPROVED');
@@ -68,7 +91,13 @@ export default function WorkshopsScreen() {
 
     try {
       setRegistering(wsId);
-      const res = await axios.post(`${ENDPOINTS.COURSES.replace('/courses', '/workshops')}/register`, { workshopId: wsId });
+      const token = await getToken();
+      // Use the confirmed endpoint from admin side
+      const res = await axios.post(`${API_BASE_URL}/workshopregistrations`, { 
+        workshopId: wsId 
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       if (res.status === 200 || res.status === 201) {
         setRegisteredIds(prev => [...prev, wsId]);
@@ -156,16 +185,16 @@ export default function WorkshopsScreen() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
-              style={[styles.registerBtn, (!isApproved || registering === wsId) && styles.disabledBtn]}
+              style={[styles.registerBtn, registering === wsId && styles.disabledBtn]}
               onPress={() => handleRegister(item)}
-              disabled={!isApproved || !!registering}
+              disabled={!!registering}
             >
               {registering === wsId ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <>
-                  <Text style={styles.registerBtnText}>{isApproved ? 'Register Now' : 'Approval Required'}</Text>
-                  {isApproved ? <ChevronRight size={18} color="#fff" /> : <Lock size={16} color="#94a3b8" />}
+                  <Text style={styles.registerBtnText}>Register Now</Text>
+                  <ChevronRight size={18} color="#fff" />
                 </>
               )}
             </TouchableOpacity>

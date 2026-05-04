@@ -37,25 +37,25 @@ export default function DataExportScreen() {
       const token = await SecureStore.getItemAsync('userToken');
       
       // Request report from API
-      const response = await axios.get(`${API_BASE_URL}/export/applications?format=${format.toLowerCase()}&type=${selectedType}`, {
+      // Endpoint: /api/analytics/export/applications?type=all&format=csv
+      const response = await axios.get(`${API_BASE_URL}/analytics/export/applications?format=${format.toLowerCase()}&type=${selectedType}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // In a real app, the API would return a file URL or base64.
-      // For this demo, we'll simulate the download flow.
+      const csvData = response.data;
       const filename = `CampusGo_Report_${selectedType}_${new Date().getTime()}.${format.toLowerCase()}`;
       const fileUri = FileSystem.documentDirectory + filename;
       
-      // Simulate writing data
-      await FileSystem.writeAsStringAsync(fileUri, 'Name,Email,Course,Status\nJohn Doe,john@test.com,BIT,Approved', { encoding: FileSystem.EncodingType.UTF8 });
+      // Write the actual data from the backend
+      await FileSystem.writeAsStringAsync(fileUri, csvData, { encoding: FileSystem.EncodingType.UTF8 });
 
-      Alert.alert('Report Ready', 'Your export has been generated successfully.', [
-        { text: 'Share/Save', onPress: () => Sharing.shareAsync(fileUri) },
+      Alert.alert('Report Ready', `The ${selectedType} report has been generated successfully.`, [
+        { text: 'Share / Save File', onPress: () => Sharing.shareAsync(fileUri) },
         { text: 'Done' }
       ]);
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Export Error', 'Failed to generate report. Please try again.');
+    } catch (error: any) {
+      console.error('Export Error:', error.response?.data || error.message);
+      Alert.alert('Export Error', 'Failed to generate real-time report. Ensure the server is reachable.');
     } finally {
       setLoading(false);
     }

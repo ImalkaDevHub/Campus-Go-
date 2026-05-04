@@ -28,16 +28,20 @@ export default function AdminApplicationReview() {
   
   // Modal for Image View
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [docStatuses, setDocStatuses] = useState<any>({
+    nicFront: true,
+    birthCert: true,
+    photo: true,
+    academicCert: true
+  });
 
   useEffect(() => {
-    fetchApplicationDetails();
+    if (id) fetchApplicationDetails();
   }, [id]);
 
   const fetchApplicationDetails = async () => {
     try {
       const token = await SecureStore.getItemAsync('userToken');
-      // Fix: Some backend routes use /api/applications/:id others use /api/applications/admin/:id
-      // We will try the direct ID first
       const response = await axios.get(`${API_BASE_URL}/applications/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -57,7 +61,6 @@ export default function AdminApplicationReview() {
       setUpdating(true);
       const token = await SecureStore.getItemAsync('userToken');
       
-      // Hit the update endpoint
       await axios.put(`${API_BASE_URL}/applications/${id}/status`, {
         status: newStatus,
         comment: comments
@@ -77,7 +80,7 @@ export default function AdminApplicationReview() {
   };
 
   const getDocUrl = (key: string) => {
-    // Model fields: nicFileName, birthCertFileName, passportPhotoFileName, transcriptFileName
+    if (!application) return null;
     if (key === 'nicFront') return application.nicFileName;
     if (key === 'birthCert') return application.birthCertFileName;
     if (key === 'photo') return application.passportPhotoFileName;
@@ -103,7 +106,6 @@ export default function AdminApplicationReview() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
-        {/* Workflow Control Card */}
         <View style={styles.reviewCard}>
           <Text style={styles.sectionLabel}>Approval Workflow</Text>
           <View style={styles.statusGrid}>
@@ -144,7 +146,6 @@ export default function AdminApplicationReview() {
           </TouchableOpacity>
         </View>
 
-        {/* Info Sections */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <User size={20} color="#3b82f6" />
@@ -172,7 +173,6 @@ export default function AdminApplicationReview() {
           </View>
         </View>
 
-        {/* Document Inspection */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <FileText size={20} color="#f59e0b" />
@@ -187,10 +187,12 @@ export default function AdminApplicationReview() {
               { id: 'academicCert', label: 'Certificates' },
             ].map(doc => {
               const url = getDocUrl(doc.id);
+              const isValid = docStatuses[doc.id];
+              
               return (
                 <View key={doc.id} style={styles.docWrapper}>
                   <TouchableOpacity 
-                    style={styles.docCard}
+                    style={[styles.docCard, !isValid && styles.invalidCard]}
                     onPress={() => url && setSelectedImage(url)}
                     disabled={!url}
                   >
@@ -204,14 +206,27 @@ export default function AdminApplicationReview() {
                     )}
                     <View style={styles.eyeOverlay}><Eye size={16} color="#fff" /></View>
                   </TouchableOpacity>
-                  <Text style={styles.docLabel}>{doc.label}</Text>
+                  <View style={styles.docActions}>
+                    <Text style={styles.docLabel}>{doc.label}</Text>
+                    <TouchableOpacity 
+                      style={[styles.statusToggle, isValid ? styles.validToggle : styles.invalidToggle]}
+                      onPress={() => {
+                        const newStatus = !isValid;
+                        setDocStatuses({...docStatuses, [doc.id]: newStatus});
+                        if (!newStatus) {
+                          setComments(prev => prev + (prev ? "\n" : "") + `Invalid ${doc.label}: Please re-upload.`);
+                        }
+                      }}
+                    >
+                      {isValid ? <CheckCircle size={14} color="#10b981" /> : <XCircle size={14} color="#ef4444" />}
+                    </TouchableOpacity>
+                  </View>
                 </View>
               );
             })}
           </View>
         </View>
 
-        {/* Legal & Signature */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <FileText size={20} color="#4F46E5" />
@@ -230,7 +245,6 @@ export default function AdminApplicationReview() {
         <View style={{ height: 60 }} />
       </ScrollView>
 
-      {/* Image Modal */}
       <Modal visible={!!selectedImage} transparent animationType="fade">
         <View style={styles.modalBg}>
           <TouchableOpacity style={styles.closeModal} onPress={() => setSelectedImage(null)}>
@@ -284,7 +298,12 @@ const styles = StyleSheet.create({
   missingDoc: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   missingText: { color: '#EF4444', fontSize: 10, fontWeight: '800' },
   eyeOverlay: { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' },
-  docLabel: { color: '#64748b', fontSize: 10, fontWeight: '800', textAlign: 'center', textTransform: 'uppercase' },
+  docLabel: { color: '#64748b', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  docActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
+  statusToggle: { padding: 4, borderRadius: 6 },
+  validToggle: { backgroundColor: 'rgba(16, 185, 129, 0.1)' },
+  invalidToggle: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+  invalidCard: { borderColor: '#ef4444', borderWidth: 2 },
   signatureDisplay: { backgroundColor: '#fff', borderRadius: 20, padding: 15, alignItems: 'center', gap: 10 },
   sigImage: { width: '100%', height: 120 },
   sigLabel: { color: '#64748b', fontSize: 10, fontWeight: '600' },

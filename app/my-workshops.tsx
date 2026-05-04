@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -14,6 +14,14 @@ import { API_BASE_URL } from '@/constants/config';
 
 const TABS = ['Upcoming', 'Past'];
 
+// Helper for Web compatibility
+const getToken = async () => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('userToken');
+  }
+  return await SecureStore.getItemAsync('userToken');
+};
+
 export default function MyWorkshops() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('Upcoming');
@@ -27,7 +35,7 @@ export default function MyWorkshops() {
 
   const fetchMyRegistrations = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await getToken();
       const response = await axios.get(`${API_BASE_URL}/workshop-registrations/my`, {
         headers: { Authorization: `Bearer ${token}` }
       });
