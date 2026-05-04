@@ -41,8 +41,15 @@ export default function RootLayout() {
       }
 
       if (token) {
-        // Token exists, go to dashboard
-        router.replace('/(tabs)');
+        const userDataStr = Platform.OS === 'web' ? localStorage.getItem('userData') : await SecureStore.getItemAsync('userData');
+        const user = userDataStr ? JSON.parse(userDataStr) : null;
+        const staffRoles = ['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'];
+
+        if (user && staffRoles.includes(user.role)) {
+          router.replace('/admin/dashboard');
+        } else {
+          router.replace('/student/dashboard');
+        }
       } else {
         // No token, go to login
         router.replace('/login');

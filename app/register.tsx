@@ -37,10 +37,15 @@ export default function RegisterScreen() {
 
     try {
       setLoading(true);
-      await axios.post(`${API_BASE_URL}/auth/register`, {
+      console.log('[DEBUG] Sending Registration Data:', { ...formData, email: formData.email.trim().toLowerCase() });
+      
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
         ...formData,
+        email: formData.email.trim().toLowerCase(),
         role: 'STUDENT'
       });
+      
+      console.log('[DEBUG] Registration Success:', response.data);
       
       Alert.alert('Success', 'Account created successfully! Please sign in.', [
         { text: 'Login Now', onPress: () => router.replace('/login') }

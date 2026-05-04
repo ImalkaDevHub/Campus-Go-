@@ -60,18 +60,12 @@ export default function LoginScreen() {
       await saveToken('userToken', token);
       await saveToken('userData', JSON.stringify(user));
 
-      const staffRoles = [
-        'super_admin', 
-        'admin', 
-        'registration_staff', 
-        'marketing_coordinator', 
-        'finance_staff'
-      ];
+      const staffRoles = ['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'];
 
       if (staffRoles.includes(user.role)) {
-        router.replace('/(tabs)/dashboard');
+        router.replace('/admin/dashboard');
       } else {
-        router.replace('/(tabs)');
+        router.replace('/student/dashboard');
       }
 
     } catch (err: any) {
@@ -94,8 +88,41 @@ export default function LoginScreen() {
     }
   };
 
-  const handleSocialLogin = (provider: string) => {
-    Alert.alert(`${provider} Login`, `${provider} Sign In coming soon!`);
+  const handleSocialLogin = async (provider: string) => {
+    if (provider === 'Google') {
+      try {
+        setLoading(true);
+        // This is a placeholder for the real Google Auth Session flow
+        // In a real app, you'd use expo-auth-session/providers/google
+        
+        console.log('[AUTH] Initiating Google Sign-In...');
+        
+        // Mocking a successful Google response for demonstration
+        // Replace this with actual Google Auth result handling
+        const mockGoogleUser = {
+          email: 'student.google@gmail.com',
+          name: 'Google Student',
+          photoURL: 'https://lh3.googleusercontent.com/a/ACg8ocL...',
+          uid: 'google_uid_12345'
+        };
+
+        const response = await axios.post(`${API_BASE_URL}/auth/google`, mockGoogleUser);
+        
+        const { token, user } = response.data;
+        await saveToken('userToken', token);
+        await saveToken('userData', JSON.stringify(user));
+
+        router.replace('/student/dashboard');
+        
+      } catch (err: any) {
+        console.error('Google Login Error:', err);
+        Alert.alert('Google Login Failed', 'Could not authenticate with Google.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      Alert.alert(`${provider} Login`, `${provider} Sign In coming soon!`);
+    }
   };
 
   return (
