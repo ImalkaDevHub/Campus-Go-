@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   UserPlus, Search, User, 
   Mail, Phone, CreditCard, 
-  CheckCircle, ArrowRight, Zap 
+  CheckCircle, ArrowRight, Zap,
+  BookOpen, Calendar, Users, Trophy
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/constants/config';
+
+const getToken = async () => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('userToken');
+  }
+  return await SecureStore.getItemAsync('userToken');
+};
 
 export default function OnSpotRegistration() {
   const insets = useSafeAreaInsets();
@@ -18,6 +26,13 @@ export default function OnSpotRegistration() {
   const [loading, setLoading] = useState(false);
   const [selectedWorkshop, setSelectedWorkshop] = useState<any>(null);
   
+  const [stats, setStats] = useState({
+    total: 0,
+    upcoming: 0,
+    globalRegs: 0,
+    today: 0
+  });
+
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -36,11 +51,34 @@ export default function OnSpotRegistration() {
 
   const fetchWorkshops = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/workshops`);
-      const upcoming = response.data.filter((w: any) => new Date(w.date) >= new Date());
-      setWorkshops(upcoming);
+      setLoading(true);
+      const token = await getToken();
+      const response = await axios.get(`${API_BASE_URL}/workshops`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const data = response.data;
+      
+      // Calculate stats
+      const total = data.length;
+      const upcoming = data.filter((w: any) => w.status === 'upcoming' || new Date(w.date) >= new Date()).length;
+      const globalRegs = data.reduce((acc: number, w: any) => acc + (w.registeredCount || w.registrations?.length || 0), 0);
+      const todayCount = data.filter((w: any) => new Date(w.date).toDateString() === new Date().toDateString()).length;
+      
+      setStats({
+        total,
+        upcoming,
+        globalRegs,
+        today: todayCount
+      });
+      
+      // Only show upcoming/today workshops for registration
+      const activeWorkshops = data.filter((w: any) => new Date(w.date) >= new Date() || new Date(w.date).toDateString() === new Date().toDateString());
+      setWorkshops(activeWorkshops);
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,25 +86,27 @@ export default function OnSpotRegistration() {
     if (searchQuery.length < 3) return;
     try {
       setSearching(true);
-      const token = await SecureStore.getItemAsync('userToken');
-      // Mock search - in real app this hits /api/users/search
-      const response = await axios.get(`${API_BASE_URL}/applications?search=${searchQuery}`, {
+      const token = await getToken();
+      
+      const response = await axios.get(`${API_BASE_URL}/users/search?query=${searchQuery}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (response.data.length > 0) {
+      
+      if (response.data && response.data.length > 0) {
         const s = response.data[0];
         setFormData({
-          fullName: s.fullName,
-          email: s.email,
-          mobileNumber: s.mobileNumber || '',
-          nic: s.nic
+          fullName: s.name || s.fullName || '',
+          email: s.email || '',
+          mobileNumber: s.mobile || s.mobileNumber || '',
+          nic: s.nic || ''
         });
-        Alert.alert('Student Found', `Details loaded for ${s.fullName}`);
+        Alert.alert('Student Found', `Details loaded for ${s.name || s.fullName}`);
       } else {
         Alert.alert('Not Found', 'No student found with these details. Please enter manually.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      Alert.alert('Not Found', 'Could not fetch student details.');
     } finally {
       setSearching(false);
     }
@@ -84,16 +124,19 @@ export default function OnSpotRegistration() {
 
     try {
       setLoading(true);
-      const token = await SecureStore.getItemAsync('userToken');
-      await axios.post(`${API_BASE_URL}/workshop-registrations/manual`, {
-        ...formData,
+      const token = await getToken();
+      
+      await axios.post(`${API_BASE_URL}/workshopregistrations`, {
         workshopId: selectedWorkshop._id || selectedWorkshop.id,
-        attendanceStatus: 'Present' // Walk-ins are checked in immediately
+        studentName: formData.fullName,
+        email: formData.email,
+        mobile: formData.mobileNumber,
+        nic: formData.nic
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      Alert.alert('Registration Successful', `${formData.fullName} has been registered and checked in.`, [
+      Alert.alert('Registered Successfully!', `${formData.fullName} has been registered.`, [
         { text: 'Done', onPress: () => router.back() }
       ]);
     } catch (error: any) {
@@ -111,20 +154,60 @@ export default function OnSpotRegistration() {
 
       <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]} showsVerticalScrollIndicator={false}>
         
+        {/* STATS ROW */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statCard, { borderColor: 'rgba(124, 58, 237, 0.3)' }]}>
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(124, 58, 237, 0.15)' }]}>
+              <BookOpen size={20} color="#7C3AED" />
+            </View>
+            <Text style={styles.statNum}>{stats.total}</Text>
+            <Text style={styles.statLabel}>WORKSHOPS</Text>
+          </View>
+          <View style={[styles.statCard, { borderColor: 'rgba(245, 158, 11, 0.3)' }]}>
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+              <Calendar size={20} color="#F59E0B" />
+            </View>
+            <Text style={styles.statNum}>{stats.upcoming}</Text>
+            <Text style={styles.statLabel}>UPCOMING</Text>
+          </View>
+          <View style={[styles.statCard, { borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+              <Users size={20} color="#3B82F6" />
+            </View>
+            <Text style={styles.statNum}>{stats.globalRegs}</Text>
+            <Text style={styles.statLabel}>GLOBAL REGS</Text>
+          </View>
+          <View style={[styles.statCard, { borderColor: 'rgba(16, 185, 129, 0.3)' }]}>
+            <View style={[styles.iconBox, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+              <Trophy size={20} color="#10B981" />
+            </View>
+            <Text style={styles.statNum}>{stats.today}</Text>
+            <Text style={styles.statLabel}>TODAY</Text>
+          </View>
+        </View>
+
         {/* Workshop Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Active Event</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
-            {workshops.map((w: any) => (
-              <TouchableOpacity 
-                key={w._id || w.id} 
-                style={[styles.catChip, selectedWorkshop?._id === (w._id || w.id) && styles.activeChip]}
-                onPress={() => setSelectedWorkshop(w)}
-              >
-                <Text style={[styles.catText, selectedWorkshop?._id === (w._id || w.id) && styles.activeCatText]}>{w.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {loading && workshops.length === 0 ? (
+            <ActivityIndicator color="#06B6D4" />
+          ) : workshops.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+              {workshops.map((w: any) => (
+                <TouchableOpacity 
+                  key={w._id || w.id} 
+                  style={[styles.catChip, selectedWorkshop?._id === (w._id || w.id) && styles.activeChip]}
+                  onPress={() => setSelectedWorkshop(w)}
+                >
+                  <Text style={[styles.catText, selectedWorkshop?._id === (w._id || w.id) && styles.activeCatText]}>
+                    {w.title || w.workshopName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={{ color: '#64748b' }}>No active workshops found.</Text>
+          )}
         </View>
 
         {/* Quick Search */}
@@ -223,6 +306,41 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
+  },
+  statsContainer: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 12, 
+    marginBottom: 20 
+  },
+  statCard: { 
+    flex: 1, 
+    minWidth: '45%', 
+    backgroundColor: '#1e293b', 
+    padding: 16, 
+    borderRadius: 20, 
+    borderWidth: 1, 
+    alignItems: 'flex-start' 
+  },
+  iconBox: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: 12 
+  },
+  statNum: { 
+    color: '#fff', 
+    fontSize: 24, 
+    fontWeight: '900', 
+    marginBottom: 4 
+  },
+  statLabel: { 
+    color: '#94a3b8', 
+    fontSize: 11, 
+    fontWeight: '700',
+    letterSpacing: 0.5
   },
   section: {
     backgroundColor: '#1e293b',

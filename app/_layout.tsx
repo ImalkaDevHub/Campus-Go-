@@ -43,20 +43,27 @@ export default function RootLayout() {
       if (token) {
         const userDataStr = Platform.OS === 'web' ? localStorage.getItem('userData') : await SecureStore.getItemAsync('userData');
         const user = userDataStr ? JSON.parse(userDataStr) : null;
+        
+        if (!user) {
+          // If token exists but user data is missing, clear token to prevent loop
+          if (Platform.OS === 'web') {
+            localStorage.removeItem('userToken');
+          } else {
+            await SecureStore.deleteItemAsync('userToken');
+          }
+          return;
+        }
+
         const staffRoles = ['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'];
 
-        if (user && staffRoles.includes(user.role)) {
+        if (staffRoles.includes(user.role)) {
           router.replace('/admin/dashboard');
         } else {
           router.replace('/student/dashboard');
         }
-      } else {
-        // No token, go to login
-        router.replace('/login');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/login');
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, Image, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -13,6 +13,14 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/constants/config';
+
+// Helper for Web compatibility
+const getToken = async () => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('userToken');
+  }
+  return await SecureStore.getItemAsync('userToken');
+};
 
 const CATEGORIES = ['Seminar', 'Workshop', 'Webinar', 'Career Fair'];
 
@@ -47,7 +55,7 @@ export default function WorkshopForm() {
 
   const fetchWorkshop = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await getToken();
       const response = await axios.get(`${API_BASE_URL}/workshops/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -67,7 +75,7 @@ export default function WorkshopForm() {
 
   const pickImage = async (field: string) => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: field === 'bannerImage' ? [16, 9] : [1, 1],
       quality: 0.8,
@@ -97,19 +105,97 @@ export default function WorkshopForm() {
   };
 
   const handleSave = async (statusOverride?: string) => {
-    if (!formData.title || !formData.date || !formData.speakerName) {
-      Alert.alert('Required Fields', 'Please fill in the title, date, and speaker name.');
+    // 1. Mandatory Text Fields
+    if (!formData.title.trim()) {
+      Alert.alert('Validation Error', 'Workshop title is required.');
+      return;
+    }
+    if (!formData.description.trim() || formData.description.length < 20) {
+      Alert.alert('Validation Error', 'Please provide a more detailed description (min 20 characters).');
+      return;
+    }
+    
+    // 2. Date Validation
+    if (!formData.date) {
+      Alert.alert('Validation Error', 'Workshop date is required.');
+      return;
+    }
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(formData.date)) {
+      Alert.alert('Validation Error', 'Invalid date format. Please use YYYY-MM-DD');
+      return;
+    }
+
+    // 3. Speaker & Location
+    if (!formData.speakerName.trim()) {
+      Alert.alert('Validation Error', 'Speaker name is required.');
+      return;
+    }
+    if (!formData.location.trim()) {
+      Alert.alert('Validation Error', 'Workshop location or venue is required.');
+      return;
+    }
+
+    // 4. Media Validation
+    if (!formData.bannerImage) {
+      Alert.alert('Validation Error', 'Please upload a workshop banner image.');
+      return;
+    }
+
+    // 5. Numerical Validations
+    const seats = parseInt(formData.totalSeats);
+    if (isNaN(seats) || seats <= 0) {
+      Alert.alert('Validation Error', 'Total capacity must be a positive number (at least 1).');
+      return;
+    }
+
+    const price = parseFloat(formData.price);
+    if (isNaN(price) || price < 0) {
+      Alert.alert('Validation Error', 'Price cannot be negative. Enter 0 for Free.');
+      return;
+    }
+
+    // 6. Agenda Validation
+    if (formData.agenda.length === 0) {
+      Alert.alert('Validation Error', 'Please add at least one item to the agenda.');
+      return;
+    }
+    const invalidAgenda = formData.agenda.some(item => !item.time.trim() || !item.title.trim());
+    if (invalidAgenda) {
+      Alert.alert('Validation Error', 'All agenda items must have both time and title.');
       return;
     }
 
     try {
       setLoading(true);
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await getToken();
+      
+      // Clean payload to match backend schema exactly
       const payload = {
-        ...formData,
+        title: formData.title,
+        workshopName: formData.title,
+        description: formData.description,
+        date: new Date(formData.date).toISOString(), // Use full ISO string
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        time: `${formData.startTime} - ${formData.endTime}`,
+        location: formData.location,
+        speaker: formData.speakerName, // Add 'speaker' key
+        Speaker: formData.speakerName, // Add 'Speaker' key for compatibility
+        speakerName: formData.speakerName,
+        speakerBio: formData.speakerBio,
+        speakerPhoto: formData.speakerPhoto,
+        bannerImage: formData.bannerImage,
+        banner: formData.bannerImage,
+        totalSeats: parseInt(formData.totalSeats) || 0,
+        price: parseFloat(formData.price) || 0,
+        category: formData.category,
+        type: formData.category,
         status: statusOverride || formData.status,
-        totalSeats: parseInt(formData.totalSeats),
-        price: parseFloat(formData.price)
+        isPublished: true, // Force published status
+        published: true, // Force published status
+        isActive: true, // Force active status
+        agenda: formData.agenda
       };
 
       if (id) {
@@ -125,9 +211,10 @@ export default function WorkshopForm() {
       Alert.alert('Success', 'Workshop saved successfully!', [
         { text: 'OK', onPress: () => router.back() }
       ]);
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to save workshop');
+    } catch (error: any) {
+      console.error('Save Error:', error.response?.data || error.message);
+      const errorMsg = error.response?.data?.message || 'Failed to save workshop';
+      Alert.alert('Error', errorMsg);
     } finally {
       setLoading(false);
     }

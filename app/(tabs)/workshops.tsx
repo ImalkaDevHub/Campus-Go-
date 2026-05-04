@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Image, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, TextInput, Image, ActivityIndicator, RefreshControl, ScrollView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Tag, ChevronRight, User, Bell, Search, Calendar, Clock, Users
@@ -7,9 +7,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/constants/config';
 
 const FILTERS = ['All', 'Today', 'This Week', 'Free', 'Paid'];
+
+// Helper for Web compatibility
+const getToken = async () => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('userToken');
+  }
+  return await SecureStore.getItemAsync('userToken');
+};
 
 export default function WorkshopsScreen() {
   const insets = useSafeAreaInsets();
@@ -27,10 +36,12 @@ export default function WorkshopsScreen() {
   const fetchWorkshops = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/workshops`);
-      setWorkshops(response.data);
-      setFilteredWorkshops(response.data);
+      
+      const data = response.data?.data || response.data?.workshops || (Array.isArray(response.data) ? response.data : []);
+      setWorkshops(data);
+      setFilteredWorkshops(data);
     } catch (error) {
-      console.error(error);
+      console.error('Workshops fetch error:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

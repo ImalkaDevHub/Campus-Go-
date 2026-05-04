@@ -65,8 +65,10 @@ export default function AdminDashboard() {
 
       // Fetch admin metrics
       const [appsRes, workshopsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/applications`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/applications/all`, { headers: { Authorization: `Bearer ${token}` } })
+          .catch(err => { console.warn('Failed to load applications:', err.message); return { data: [] }; }),
         axios.get(`${API_BASE_URL}/workshops`, { headers: { Authorization: `Bearer ${token}` } })
+          .catch(err => { console.warn('Failed to load workshops:', err.message); return { data: [] }; })
       ]);
 
       const allApps = appsRes.data || [];

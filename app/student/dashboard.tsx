@@ -64,17 +64,24 @@ export default function StudentDashboard() {
 
       // Fetch dynamic data in parallel
       const [appsRes, coursesRes, workshopsRes, notifsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/applications/my`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/courses`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/workshopregistrations/my`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/notifications`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE_URL}/applications/my-courses`, { headers: { Authorization: `Bearer ${token}` } })
+          .catch(e => { console.warn('applications/my-courses failed', e.message); return { data: [] }; }),
+        axios.get(`${API_BASE_URL}/courses`, { headers: { Authorization: `Bearer ${token}` } })
+          .catch(e => { console.warn('courses failed', e.message); return { data: [] }; }),
+        axios.get(`${API_BASE_URL}/workshops/registrations/my`, { headers: { Authorization: `Bearer ${token}` } })
+          .catch(e => { console.warn('workshops/registrations/my failed', e.message); return { data: [] }; }),
+        axios.get(`${API_BASE_URL}/notifications/my-notifications`, { headers: { Authorization: `Bearer ${token}` } })
+          .catch(e => { console.warn('notifications/my-notifications failed', e.message); return { data: [] }; })
       ]);
 
+      const notificationsArray = Array.isArray(notifsRes.data) ? notifsRes.data : [];
+      const unreadCount = notificationsArray.filter(n => !n.isRead).length;
+
       setStats({
-        applications: appsRes.data || [],
+        applications: Array.isArray(appsRes.data) ? appsRes.data : (appsRes.data ? [appsRes.data] : []),
         courses: coursesRes.data || [],
         workshops: workshopsRes.data || [],
-        notifications: notifsRes.data?.unreadCount || 0
+        notifications: unreadCount
       });
     } catch (error) {
       console.error('Dashboard Load Error:', error);
@@ -187,19 +194,43 @@ export default function StudentDashboard() {
 
         {/* Section: My Workshops */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Workshops</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-            {stats.workshops.map((w: any, idx) => (
-              <TouchableOpacity key={w._id || idx} style={styles.hCard}>
-                <Calendar size={20} color="#06B6D4" />
-                <Text style={styles.hCardTitle} numberOfLines={1}>{w.workshopName}</Text>
-                <View style={styles.hCardFooter}>
-                  <Clock size={12} color="#94a3b8" />
-                  <Text style={styles.hCardDate}>{w.date || 'TBA'}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Workshops</Text>
+            <TouchableOpacity onPress={() => router.push('/student/my-workshops')}>
+              <Text style={styles.viewAll}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {stats.workshops.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+              {stats.workshops.map((w: any, idx) => (
+                <TouchableOpacity 
+                  key={w._id || idx} 
+                  style={styles.hCard}
+                  onPress={() => router.push(`/workshop-details/${w.workshop?._id || w.workshopId}`)}
+                >
+                  <View style={styles.hCardIcon}>
+                    <Calendar size={18} color="#06B6D4" />
+                  </View>
+                  <Text style={styles.hCardTitle} numberOfLines={1}>
+                    {w.workshop?.title || w.workshopName || 'Workshop Event'}
+                  </Text>
+                  <View style={styles.hCardFooter}>
+                    <Clock size={12} color="#94a3b8" />
+                    <Text style={styles.hCardDate}>{w.workshop?.date ? new Date(w.workshop.date).toLocaleDateString() : 'Upcoming'}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <TouchableOpacity 
+              style={styles.emptyBrowseCard}
+              onPress={() => router.push('/student/my-workshops')}
+            >
+              <Calendar size={32} color="#334155" />
+              <Text style={styles.emptyBrowseText}>No workshops yet. Browse Events →</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Section: Enrolled Courses */}
@@ -400,25 +431,54 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   hCard: {
-    width: 180,
+    width: 200,
     backgroundColor: '#1e293b',
-    borderRadius: 20,
-    padding: 16,
-    gap: 12,
+    borderRadius: 24,
+    padding: 20,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.03)',
+  },
+  hCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   hCardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#fff',
+    marginBottom: 12,
   },
   hCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   hCardDate: {
-    fontSize: 11,
-    color: '#94a3b8',
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  emptyBrowseCard: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 24,
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    borderStyle: 'dashed',
+    gap: 12,
+  },
+  emptyBrowseText: {
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '700',
   },
   courseCard: {
     backgroundColor: '#1e293b',

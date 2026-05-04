@@ -6,16 +6,19 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Search, ChevronLeft, Book, Clock, 
-  DollarSign, Calendar, ChevronRight, GraduationCap, Filter
+  DollarSign, Calendar, ChevronRight, GraduationCap,
+  Home, BookOpen, LayoutDashboard
 } from 'lucide-react-native';
 import { router, Stack } from 'expo-router';
 import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/constants/config';
 
 export default function StudentPrograms() {
   const { width } = useWindowDimensions();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('All');
 
@@ -26,17 +29,19 @@ export default function StudentPrograms() {
   const fetchCourses = async () => {
     try {
       setLoading(true);
+      setError('');
       const res = await axios.get(`${API_BASE_URL}/courses`);
       setCourses(res.data);
     } catch (err) {
       console.error('Fetch Programs Error:', err);
+      setError('Failed to connect to server.');
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch(status) {
+    switch(status?.toUpperCase()) {
       case 'OPEN': return '#10b981';
       case 'CLOSED': return '#ef4444';
       case 'UPCOMING': return '#f59e0b';
@@ -44,11 +49,46 @@ export default function StudentPrograms() {
     }
   };
 
-  const filteredCourses = courses.filter(c => {
-    const matchesSearch = c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         c.code.toLowerCase().includes(searchQuery.toLowerCase());
+  const getCountdown = (dateString: string) => {
+    if (!dateString) return 'TBA';
+    const target = new Date(dateString).getTime();
+    const now = new Date().getTime();
+    const diff = target - now;
+    
+    if (diff <= 0) return 'Started / Passed';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return 'Starts Tomorrow';
+    return `Starts in ${days} days`;
+  };
+
+  const handleDashboard = async () => {
+    try {
+      const token = await SecureStore.getItemAsync('userToken');
+      if (token) {
+        const userStr = await SecureStore.getItemAsync('userData');
+        const user = userStr ? JSON.parse(userStr) : null;
+        if (user && ['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'].includes(user.role)) {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/student/dashboard');
+        }
+      } else {
+        router.push('/contact');
+      }
+    } catch (e) {
+      router.push('/contact');
+    }
+  };
+
+  const filteredCourses = courses.filter((c: any) => {
+    const titleStr = (c.title || c.name || '').toLowerCase();
+    const codeStr = (c.code || '').toLowerCase();
+    const queryStr = searchQuery.toLowerCase();
+    
+    const matchesSearch = titleStr.includes(queryStr) || codeStr.includes(queryStr);
     if (activeTab === 'All') return matchesSearch;
-    return matchesSearch && c.intakeStatus === activeTab.toUpperCase();
+    return matchesSearch && (c.intakeStatus || 'OPEN') === activeTab.toUpperCase();
   });
 
   return (
@@ -95,6 +135,14 @@ export default function StudentPrograms() {
 
       {loading ? (
         <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
+      ) : error ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>Oops! Something went wrong.</Text>
+          <Text style={styles.emptySub}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={fetchCourses}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={filteredCourses}
@@ -110,7 +158,7 @@ export default function StudentPrograms() {
                   <GraduationCap size={24} color="#fff" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.courseTitle}>{item.title}</Text>
+                  <Text style={styles.courseTitle}>{item.title || item.name}</Text>
                   <Text style={styles.courseCode}>{item.code}</Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.intakeStatus)}20` }]}>
@@ -121,20 +169,22 @@ export default function StudentPrograms() {
               <View style={styles.metaGrid}>
                 <View style={styles.metaItem}>
                   <Clock size={14} color="#64748b" />
-                  <Text style={styles.metaText}>{item.duration}</Text>
+                  <Text style={styles.metaText}>{item.duration || 'N/A'}</Text>
                 </View>
                 <View style={styles.metaItem}>
                   <DollarSign size={14} color="#64748b" />
-                  <Text style={styles.metaText}>LKR {item.fees?.toLocaleString()}</Text>
+                  <Text style={styles.metaText}>LKR {item.fees?.toLocaleString() || item.courseFee?.toLocaleString() || '0'} / year</Text>
                 </View>
-                <View style={styles.metaItem}>
-                  <Calendar size={14} color="#64748b" />
-                  <Text style={styles.metaText}>{item.nextIntakeDate || 'TBA'}</Text>
+                <View style={[styles.metaItem, { width: '100%', marginTop: 4 }]}>
+                  <Calendar size={14} color="#4F46E5" />
+                  <Text style={[styles.metaText, { color: '#4F46E5', fontWeight: '700' }]}>
+                    {getCountdown(item.nextIntakeDate)}
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.cardFooter}>
-                <Text style={styles.detailsBtn}>View Program Details</Text>
+                <Text style={styles.detailsBtn}>View Details</Text>
                 <ChevronRight size={16} color="#4F46E5" />
               </View>
             </TouchableOpacity>
@@ -148,6 +198,22 @@ export default function StudentPrograms() {
           }
         />
       )}
+
+      {/* Custom Bottom Tab Bar */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/')}>
+          <Home size={24} color="#64748b" />
+          <Text style={styles.tabText}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem} disabled>
+          <BookOpen size={24} color="#4F46E5" />
+          <Text style={[styles.tabText, { color: '#4F46E5' }]}>Programs</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem} onPress={handleDashboard}>
+          <LayoutDashboard size={24} color="#64748b" />
+          <Text style={styles.tabText}>Dashboard</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -180,7 +246,7 @@ const styles = StyleSheet.create({
   activeTab: { backgroundColor: 'rgba(79, 70, 229, 0.2)', borderColor: '#4F46E5' },
   filterText: { color: '#64748b', fontSize: 13, fontWeight: '700' },
   activeFilterText: { color: '#fff' },
-  listContent: { padding: 20, paddingBottom: 60 },
+  listContent: { padding: 20, paddingBottom: 120 },
   card: {
     backgroundColor: '#1e293b',
     borderRadius: 24,
@@ -202,5 +268,10 @@ const styles = StyleSheet.create({
   detailsBtn: { color: '#4F46E5', fontSize: 13, fontWeight: '800' },
   emptyContainer: { alignItems: 'center', marginTop: 100 },
   emptyTitle: { color: '#fff', fontSize: 18, fontWeight: '800', marginTop: 20 },
-  emptySub: { color: '#64748b', fontSize: 14, marginTop: 8, textAlign: 'center' }
+  emptySub: { color: '#64748b', fontSize: 14, marginTop: 8, textAlign: 'center' },
+  retryBtn: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#4F46E5', borderRadius: 8 },
+  retryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  tabBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', backgroundColor: 'rgba(15,23,42,0.95)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingBottom: 30, paddingTop: 15 },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  tabText: { fontSize: 11, fontWeight: '700', color: '#64748b' }
 });

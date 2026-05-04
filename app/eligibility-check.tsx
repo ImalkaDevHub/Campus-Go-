@@ -47,7 +47,7 @@ export default function EligibilityCheckScreen() {
 
     try {
       setChecking(true);
-      const response = await axios.post(`${API_BASE_URL}/check-eligibility`, {
+      const response = await axios.post(`${API_BASE_URL}/courses/check-eligibility`, {
         courseId: selectedCourseId,
         edLevel,
         results,
@@ -94,7 +94,7 @@ export default function EligibilityCheckScreen() {
                       onPress={() => setSelectedCourseId(c._id || c.id)}
                     >
                       <Text style={[styles.courseTabText, selectedCourseId === (c._id || c.id) && styles.activeCourseTabText]}>
-                        {c.name}
+                        {c.name || c.title}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -183,6 +183,19 @@ export default function EligibilityCheckScreen() {
               <Text style={styles.resultMsg}>
                 {result.message}
               </Text>
+
+              {result.eligible && result.courseDetails && (
+                <View style={styles.courseInfoBox}>
+                  <View style={styles.feeItem}>
+                    <Text style={styles.feeLabel}>Course Fee</Text>
+                    <Text style={styles.feeVal}>LKR {result.courseDetails.fees?.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.feeItem}>
+                    <Text style={styles.feeLabel}>Duration</Text>
+                    <Text style={styles.feeVal}>{result.courseDetails.duration || 'N/A'}</Text>
+                  </View>
+                </View>
+              )}
 
               {result.eligible ? (
                 <TouchableOpacity 
@@ -451,6 +464,31 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.1)',
+  },
+  courseInfoBox: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 20,
+    padding: 20,
+    gap: 12,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  feeItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  feeLabel: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  feeVal: {
+    fontSize: 15,
+    color: '#fff',
+    fontWeight: '800',
   },
   tipText: {
     flex: 1,

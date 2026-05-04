@@ -11,28 +11,37 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { ENDPOINTS } from '@/constants/config';
 
-const STATUS_FILTERS = ['All', 'PENDING', 'UNDER REVIEW', 'APPROVED', 'REJECTED'];
+const STATUS_FILTERS = ['All', 'PENDING', 'UNDER REVIEW', 'APPROVED', 'REJECTED', 'UPDATES REQUESTED'];
+const INTAKE_FILTERS = ['All', '2024', '2025', '2026'];
 
 export default function AdminApplicationsList() {
   const [applications, setApplications] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('All');
+  
+  // Filter States
+  const [activeStatus, setActiveStatus] = useState('All');
+  const [activeCourse, setActiveCourse] = useState('All');
+  const [activeIntake, setActiveIntake] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchApplications();
+    fetchAllData();
   }, []);
 
-  const fetchApplications = async () => {
+  const fetchAllData = async () => {
     try {
+      setLoading(true);
       const token = await SecureStore.getItemAsync('userToken');
-      const response = await axios.get(ENDPOINTS.APPLICATIONS, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setApplications(response.data);
+      const [appsRes, coursesRes] = await Promise.all([
+        axios.get(ENDPOINTS.APPLICATIONS, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(ENDPOINTS.COURSES)
+      ]);
+      setApplications(appsRes.data);
+      setCourses(coursesRes.data);
     } catch (error) {
-      console.error(error);
+      console.error('Fetch Admin Data Error:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -41,13 +50,30 @@ export default function AdminApplicationsList() {
 
   const getFilteredData = () => {
     let data = applications;
-    if (activeFilter !== 'All') {
-      data = data.filter((app: any) => app.status === activeFilter);
+    
+    // Status Filter
+    if (activeStatus !== 'All') {
+      data = data.filter((app: any) => app.status === activeStatus);
     }
+    
+    // Course Filter
+    if (activeCourse !== 'All') {
+      data = data.filter((app: any) => app.courseName === activeCourse);
+    }
+
+    // Intake Filter
+    if (activeIntake !== 'All') {
+      data = data.filter((app: any) => app.intakeYear === activeIntake);
+    }
+
+    // Search Query
     if (searchQuery) {
+      const q = searchQuery.toLowerCase();
       data = data.filter((app: any) => 
-        app.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.courseName?.toLowerCase().includes(searchQuery.toLowerCase())
+        app.fullName?.toLowerCase().includes(q) ||
+        app.courseName?.toLowerCase().includes(q) ||
+        app.email?.toLowerCase().includes(q) ||
+        app.nicPassportNumber?.toLowerCase().includes(q)
       );
     }
     return data;
@@ -65,7 +91,7 @@ export default function AdminApplicationsList() {
           </View>
           <View>
             <Text style={styles.studentName}>{item.fullName}</Text>
-            <Text style={styles.appDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+            <Text style={styles.appDate}>{new Date(item.createdAt).toLocaleDateString()} • Intake {item.intakeYear || 'N/A'}</Text>
           </View>
         </View>
         <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
@@ -98,21 +124,54 @@ export default function AdminApplicationsList() {
           <Search size={20} color="#64748b" />
           <TextInput 
             style={styles.searchInput}
-            placeholder="Search by student or course..."
+            placeholder="Search by student, NIC or email..."
             placeholderTextColor="#64748b"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
 
+        {/* Status Filters */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterList}>
           {STATUS_FILTERS.map(f => (
             <TouchableOpacity 
               key={f} 
-              style={[styles.filterTab, activeFilter === f && styles.activeFilterTab]}
-              onPress={() => setActiveFilter(f)}
+              style={[styles.filterTab, activeStatus === f && styles.activeFilterTab]}
+              onPress={() => setActiveStatus(f)}
             >
-              <Text style={[styles.filterTabText, activeFilter === f && styles.activeFilterTabText]}>{f}</Text>
+              <Text style={[styles.filterTabText, activeStatus === f && styles.activeFilterTabText]}>{f}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Course Filters */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.filterList, { marginTop: 12 }]}>
+          <TouchableOpacity 
+            style={[styles.filterTab, activeCourse === 'All' && styles.activeFilterTab]}
+            onPress={() => setActiveCourse('All')}
+          >
+            <Text style={[styles.filterTabText, activeCourse === 'All' && styles.activeFilterTabText]}>All Courses</Text>
+          </TouchableOpacity>
+          {courses.map((c: any) => (
+            <TouchableOpacity 
+              key={c._id || c.id} 
+              style={[styles.filterTab, activeCourse === c.name && styles.activeFilterTab]}
+              onPress={() => setActiveCourse(c.name)}
+            >
+              <Text style={[styles.filterTabText, activeCourse === c.name && styles.activeFilterTabText]}>{c.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Intake Filters */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.filterList, { marginTop: 12 }]}>
+          {INTAKE_FILTERS.map(f => (
+            <TouchableOpacity 
+              key={f} 
+              style={[styles.filterTab, activeIntake === f && styles.activeFilterTab]}
+              onPress={() => setActiveIntake(f)}
+            >
+              <Text style={[styles.filterTabText, activeIntake === f && styles.activeFilterTabText]}>{f}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -127,7 +186,7 @@ export default function AdminApplicationsList() {
           keyExtractor={(item) => (item._id || item.id).toString()}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchApplications(); }} tintColor="#4F46E5" />
+            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAllData(); }} tintColor="#4F46E5" />
           }
         />
       )}

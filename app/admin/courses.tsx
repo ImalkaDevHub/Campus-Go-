@@ -8,14 +8,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { 
   Plus, Search, Edit3, Trash2, 
   ChevronLeft, X, Book, Clock, 
-  DollarSign, Calendar, ChevronRight, CheckCircle
+  DollarSign, Calendar, RefreshCw, BookOpen
 } from 'lucide-react-native';
 import { router, Stack } from 'expo-router';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/constants/config';
 
-// Helper for Auth
 const getAuthHeaders = async () => {
   const token = Platform.OS === 'web' 
     ? localStorage.getItem('userToken') 
@@ -28,6 +27,8 @@ export default function AdminCourses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('All');
+  
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState(null);
@@ -41,10 +42,13 @@ export default function AdminCourses() {
     eligibilityRequirements: '',
     intakeStatus: 'OPEN',
     nextIntakeDate: '',
-    modules: []
+    modules: [] as string[]
   });
 
   const [newModule, setNewModule] = useState('');
+
+  // Inline Intake Management States
+  const [updatingIntake, setUpdatingIntake] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCourses();
@@ -53,7 +57,7 @@ export default function AdminCourses() {
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE_URL}/courses`);
+      const res = await axios.get(`${API_BASE_URL}/courses/all`);
       setCourses(res.data);
     } catch (err) {
       console.error('Fetch Courses Error:', err);
@@ -64,8 +68,8 @@ export default function AdminCourses() {
   };
 
   const handleSave = async () => {
-    if (!formData.title || !formData.code) {
-      Alert.alert('Error', 'Title and Code are required');
+    if (!formData.title || !formData.code || !formData.fees) {
+      Alert.alert('Validation Error', 'Title, Code, and Fees are required.');
       return;
     }
 
@@ -73,10 +77,16 @@ export default function AdminCourses() {
       setLoading(true);
       const headers = await getAuthHeaders();
       
+      const payload = {
+        ...formData,
+        fees: parseFloat(formData.fees) || 0,
+        nextIntakeDate: formData.nextIntakeDate ? new Date(formData.nextIntakeDate).toISOString() : undefined,
+      };
+
       if (isEditing) {
-        await axios.put(`${API_BASE_URL}/courses/${currentId}`, formData, { headers });
+        await axios.put(`${API_BASE_URL}/courses/${currentId}`, payload, { headers });
       } else {
-        await axios.post(`${API_BASE_URL}/courses`, formData, { headers });
+        await axios.post(`${API_BASE_URL}/courses`, payload, { headers });
       }
       
       setModalVisible(false);
@@ -108,6 +118,22 @@ export default function AdminCourses() {
     ]);
   };
 
+  const handleInlineIntakeUpdate = async (id: string, status: string, date: string) => {
+    try {
+      setUpdatingIntake(id);
+      const headers = await getAuthHeaders();
+      await axios.put(`${API_BASE_URL}/courses/${id}/intake`, {
+        intakeStatus: status,
+        nextIntakeDate: date ? new Date(date).toISOString() : undefined
+      }, { headers });
+      fetchCourses();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update intake status.');
+    } finally {
+      setUpdatingIntake(null);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       title: '',
@@ -126,14 +152,14 @@ export default function AdminCourses() {
 
   const openEdit = (course: any) => {
     setFormData({
-      title: course.title,
-      code: course.code,
-      description: course.description,
-      duration: course.duration,
-      fees: course.fees?.toString() || '',
-      eligibilityRequirements: course.eligibilityRequirements,
+      title: course.title || course.name || '',
+      code: course.code || '',
+      description: course.description || '',
+      duration: course.duration || '',
+      fees: course.fees?.toString() || course.courseFee?.toString() || '',
+      eligibilityRequirements: course.eligibilityRequirements || '',
       intakeStatus: course.intakeStatus || 'OPEN',
-      nextIntakeDate: course.nextIntakeDate,
+      nextIntakeDate: course.nextIntakeDate ? new Date(course.nextIntakeDate).toISOString().split('T')[0] : (course.intakeDate ? new Date(course.intakeDate).toISOString().split('T')[0] : ''),
       modules: course.modules || []
     });
     setCurrentId(course._id || course.id);
@@ -154,13 +180,18 @@ export default function AdminCourses() {
     setFormData({ ...formData, modules: updated });
   };
 
-  const filteredCourses = courses.filter(c => 
-    c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    c.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCourses = courses.filter((c: any) => {
+    const titleStr = (c.title || c.name || '').toLowerCase();
+    const codeStr = (c.code || '').toLowerCase();
+    const queryStr = searchQuery.toLowerCase();
+    
+    const matchesSearch = titleStr.includes(queryStr) || codeStr.includes(queryStr);
+    if (activeTab === 'All') return matchesSearch;
+    return matchesSearch && (c.intakeStatus || 'OPEN') === activeTab.toUpperCase();
+  });
 
   const getStatusColor = (status: string) => {
-    switch(status) {
+    switch(status?.toUpperCase()) {
       case 'OPEN': return '#10b981';
       case 'CLOSED': return '#ef4444';
       case 'UPCOMING': return '#f59e0b';
@@ -194,6 +225,18 @@ export default function AdminCourses() {
             onChangeText={setSearchQuery}
           />
         </View>
+
+        <View style={styles.filterRow}>
+          {['All', 'Open', 'Closed', 'Upcoming'].map(tab => (
+            <TouchableOpacity 
+              key={tab} 
+              style={[styles.filterTab, activeTab === tab && styles.activeTab]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.filterText, activeTab === tab && styles.activeFilterText]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {loading && courses.length === 0 ? (
@@ -207,7 +250,7 @@ export default function AdminCourses() {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.courseTitle}>{item.title}</Text>
+                  <Text style={styles.courseTitle}>{item.title || item.name}</Text>
                   <Text style={styles.courseCode}>{item.code}</Text>
                 </View>
                 <View style={[styles.statusChip, { borderColor: getStatusColor(item.intakeStatus) }]}>
@@ -218,18 +261,47 @@ export default function AdminCourses() {
               <View style={styles.cardBody}>
                 <View style={styles.metaItem}>
                   <Clock size={14} color="#94a3b8" />
-                  <Text style={styles.metaText}>{item.duration}</Text>
+                  <Text style={styles.metaText}>{item.duration || 'N/A'}</Text>
                 </View>
                 <View style={styles.metaItem}>
                   <DollarSign size={14} color="#94a3b8" />
-                  <Text style={styles.metaText}>LKR {item.fees?.toLocaleString()}</Text>
+                  <Text style={styles.metaText}>LKR {item.fees?.toLocaleString() || item.courseFee?.toLocaleString() || '0'}</Text>
                 </View>
+                <View style={styles.metaItem}>
+                  <Calendar size={14} color="#94a3b8" />
+                  <Text style={styles.metaText}>{item.nextIntakeDate ? new Date(item.nextIntakeDate).toLocaleDateString() : 'TBA'}</Text>
+                </View>
+                <View style={[styles.metaItem, { width: '100%', marginTop: 4 }]}>
+                  <BookOpen size={14} color="#94a3b8" />
+                  <Text style={styles.metaText}>{item.modules?.length || 0} Modules</Text>
+                </View>
+              </View>
+
+              {/* INTAKE MANAGEMENT INLINE */}
+              <View style={styles.intakeSection}>
+                <Text style={styles.intakeLabel}>Intake Management</Text>
+                <View style={styles.intakeRow}>
+                  {['OPEN', 'CLOSED', 'UPCOMING'].map(status => (
+                    <TouchableOpacity 
+                      key={status}
+                      style={[
+                        styles.intakeBtn, 
+                        item.intakeStatus === status && { backgroundColor: getStatusColor(status) }
+                      ]}
+                      onPress={() => handleInlineIntakeUpdate(item._id || item.id, status, item.nextIntakeDate)}
+                      disabled={updatingIntake === (item._id || item.id)}
+                    >
+                      <Text style={[styles.intakeBtnText, item.intakeStatus === status && { color: '#fff' }]}>{status}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {updatingIntake === (item._id || item.id) && <ActivityIndicator size="small" color="#4F46E5" style={{ marginTop: 10 }} />}
               </View>
 
               <View style={styles.cardActions}>
                 <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(item)}>
                   <Edit3 size={18} color="#4F46E5" />
-                  <Text style={[styles.actionText, { color: '#4F46E5' }]}>Edit</Text>
+                  <Text style={[styles.actionText, { color: '#4F46E5' }]}>Edit Details</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item._id || item.id)}>
                   <Trash2 size={18} color="#ef4444" />
@@ -252,7 +324,7 @@ export default function AdminCourses() {
         <Plus size={28} color="#fff" />
       </TouchableOpacity>
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Modal (Bottom Sheet Style) */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -262,12 +334,12 @@ export default function AdminCourses() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.formScroll}>
-              <Text style={styles.label}>Course Title</Text>
+              <Text style={styles.label}>Course Title *</Text>
               <TextInput style={styles.input} value={formData.title} onChangeText={(v) => setFormData({...formData, title: v})} placeholder="e.g. BBA in Management" placeholderTextColor="#475569" />
               
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Course Code</Text>
+                  <Text style={styles.label}>Course Code *</Text>
                   <TextInput style={styles.input} value={formData.code} onChangeText={(v) => setFormData({...formData, code: v})} placeholder="MGT101" placeholderTextColor="#475569" />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
@@ -281,30 +353,30 @@ export default function AdminCourses() {
 
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Fees (LKR)</Text>
+                  <Text style={styles.label}>Fees (LKR) *</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={formData.fees} onChangeText={(v) => setFormData({...formData, fees: v})} placeholder="450000" placeholderTextColor="#475569" />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.label}>Next Intake</Text>
-                  <TextInput style={styles.input} value={formData.nextIntakeDate} onChangeText={(v) => setFormData({...formData, nextIntakeDate: v})} placeholder="2024-09-15" placeholderTextColor="#475569" />
+                  <Text style={styles.label}>Next Intake Date</Text>
+                  <TextInput style={styles.input} value={formData.nextIntakeDate} onChangeText={(v) => setFormData({...formData, nextIntakeDate: v})} placeholder="YYYY-MM-DD" placeholderTextColor="#475569" />
                 </View>
               </View>
+
+              <Text style={styles.label}>Eligibility Requirements</Text>
+              <TextInput style={[styles.input, { height: 80 }]} multiline value={formData.eligibilityRequirements} onChangeText={(v) => setFormData({...formData, eligibilityRequirements: v})} placeholder="e.g. 3 A/L passes in any stream..." placeholderTextColor="#475569" />
 
               <Text style={styles.label}>Intake Status</Text>
               <View style={styles.statusPicker}>
                 {['OPEN', 'CLOSED', 'UPCOMING'].map(s => (
                   <TouchableOpacity 
                     key={s} 
-                    style={[styles.statusOption, formData.intakeStatus === s && { backgroundColor: getStatusColor(s) }]}
+                    style={[styles.statusOption, formData.intakeStatus === s && { backgroundColor: getStatusColor(s), borderColor: getStatusColor(s) }]}
                     onPress={() => setFormData({...formData, intakeStatus: s})}
                   >
                     <Text style={[styles.statusOptionText, formData.intakeStatus === s && { color: '#fff' }]}>{s}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-
-              <Text style={styles.label}>Eligibility Requirements</Text>
-              <TextInput style={[styles.input, { height: 80 }]} multiline value={formData.eligibilityRequirements} onChangeText={(v) => setFormData({...formData, eligibilityRequirements: v})} placeholder="Min. requirements..." placeholderTextColor="#475569" />
 
               <Text style={styles.label}>Course Modules</Text>
               <View style={styles.moduleInputRow}>
@@ -345,8 +417,21 @@ const styles = StyleSheet.create({
     height: 50,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
+    marginBottom: 16,
   },
   searchInput: { flex: 1, color: '#fff', marginLeft: 12, fontSize: 14 },
+  filterRow: { flexDirection: 'row', gap: 10 },
+  filterTab: { 
+    paddingHorizontal: 16, 
+    paddingVertical: 8, 
+    borderRadius: 10, 
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)'
+  },
+  activeTab: { backgroundColor: 'rgba(79, 70, 229, 0.2)', borderColor: '#4F46E5' },
+  filterText: { color: '#64748b', fontSize: 12, fontWeight: '700' },
+  activeFilterText: { color: '#fff' },
   listContent: { padding: 20, paddingBottom: 100 },
   card: {
     backgroundColor: '#1e293b',
@@ -361,11 +446,16 @@ const styles = StyleSheet.create({
   courseCode: { color: '#64748b', fontSize: 12, fontWeight: '700', letterSpacing: 1 },
   statusChip: { borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, height: 26 },
   statusText: { fontSize: 10, fontWeight: '800' },
-  cardBody: { flexDirection: 'row', gap: 20, marginBottom: 20 },
+  cardBody: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 20 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
+  intakeSection: { backgroundColor: 'rgba(0,0,0,0.2)', padding: 16, borderRadius: 16, marginBottom: 20 },
+  intakeLabel: { color: '#64748b', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginBottom: 10 },
+  intakeRow: { flexDirection: 'row', gap: 8 },
+  intakeBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: '#0f172a', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  intakeBtnText: { color: '#64748b', fontSize: 11, fontWeight: '800' },
   cardActions: { flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.03)', paddingTop: 16 },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.02)', paddingVertical: 10, borderRadius: 12 },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.02)', paddingVertical: 12, borderRadius: 12 },
   actionText: { fontSize: 13, fontWeight: '700' },
   fab: { position: 'absolute', right: 20, bottom: 30, width: 60, height: 60, borderRadius: 30, backgroundColor: '#4F46E5', alignItems: 'center', justifyContent: 'center', elevation: 8 },
   emptyContainer: { alignItems: 'center', marginTop: 100 },

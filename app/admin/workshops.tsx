@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -12,6 +12,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/constants/config';
+
+const getToken = async () => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('userToken');
+  }
+  return await SecureStore.getItemAsync('userToken');
+};
 
 export default function AdminWorkshopsDashboard() {
   const insets = useSafeAreaInsets();
@@ -31,19 +38,26 @@ export default function AdminWorkshopsDashboard() {
 
   const fetchData = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
-      const response = await axios.get(`${API_BASE_URL}/workshops`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setWorkshops(response.data);
+      const token = await getToken();
+      let responseData = [];
+      try {
+        const response = await axios.get(`${API_BASE_URL}/workshops`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        responseData = response.data || [];
+      } catch (err: any) {
+        console.warn('Failed to fetch workshops:', err.message);
+      }
+      setWorkshops(responseData);
       
       // Calculate stats
       setStats({
-        total: response.data.length,
-        upcoming: response.data.filter((w: any) => new Date(w.date) >= new Date()).length,
-        registrations: response.data.reduce((acc: number, w: any) => acc + (w.registeredCount || 0), 0),
-        today: response.data.filter((w: any) => new Date(w.date).toDateString() === new Date().toDateString()).length
+        total: responseData.length,
+        upcoming: responseData.filter((w: any) => new Date(w.date) >= new Date()).length,
+        registrations: responseData.reduce((acc: number, w: any) => acc + (w.registeredCount || w.registrations?.length || 0), 0),
+        today: responseData.filter((w: any) => new Date(w.date).toDateString() === new Date().toDateString()).length
       });
+      
     } catch (error) {
       console.error(error);
     } finally {
@@ -75,7 +89,7 @@ export default function AdminWorkshopsDashboard() {
       >
         <View style={styles.workshopHeader}>
           <View>
-            <Text style={styles.workshopTitle}>{item.title}</Text>
+            <Text style={styles.workshopTitle}>{item.title || item.workshopName}</Text>
             <Text style={styles.workshopDate}>{new Date(item.date).toLocaleDateString()} • {item.startTime}</Text>
           </View>
           <View style={[styles.statusBadge, status === 'Upcoming' ? styles.upcomingBadge : styles.completedBadge]}>
@@ -86,11 +100,11 @@ export default function AdminWorkshopsDashboard() {
         <View style={styles.workshopMeta}>
           <View style={styles.metaBox}>
             <Users size={14} color="#64748b" />
-            <Text style={styles.metaText}>{item.registeredCount || 0} Registered</Text>
+            <Text style={styles.metaText}>{item.registeredCount || item.registrations?.length || 0} Registered</Text>
           </View>
           <View style={styles.metaBox}>
             <TrendingUp size={14} color="#64748b" />
-            <Text style={styles.metaText}>{Math.round(((item.registeredCount || 0) / item.totalSeats) * 100)}% Fill</Text>
+            <Text style={styles.metaText}>{Math.round((((item.registeredCount || item.registrations?.length || 0) / (item.totalSeats || 100)) * 100))}% Fill</Text>
           </View>
         </View>
 
@@ -116,10 +130,10 @@ export default function AdminWorkshopsDashboard() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Events Management', headerTintColor: '#fff', headerStyle: { backgroundColor: '#0f172a' } }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={['#0f172a', '#1e293b']} style={StyleSheet.absoluteFill} />
 
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, { paddingTop: insets.top + 20 }]}>
         <View style={styles.statsRow}>
           {renderStatCard('Workshops', stats.total, '#4F46E5', Calendar)}
           {renderStatCard('Upcoming', stats.upcoming, '#10b981', Clock)}
@@ -168,7 +182,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statsContainer: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   statsRow: {
     flexDirection: 'row',
