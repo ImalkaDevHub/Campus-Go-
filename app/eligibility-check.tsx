@@ -47,16 +47,18 @@ export default function EligibilityCheckScreen() {
 
     try {
       setChecking(true);
-      const response = await axios.post(`${API_BASE_URL}/courses/check-eligibility`, {
-        courseId: selectedCourseId,
+      // Using the centralized ENDPOINTS constant to avoid 404s
+      const response = await axios.post(`${ENDPOINTS.COURSES}/check-eligibility`, {
+        courseId: String(selectedCourseId),
         edLevel,
         results,
         age: parseInt(age)
       });
       setResult(response.data);
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to check eligibility. Please try again.');
+    } catch (error: any) {
+      console.error('Eligibility Check Error:', error.response?.data || error.message);
+      const errorMsg = error.response?.data?.error || 'Failed to check eligibility. Please try again.';
+      Alert.alert('Notice', errorMsg);
     } finally {
       setChecking(false);
     }
