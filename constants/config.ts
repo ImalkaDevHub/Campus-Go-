@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 export const API_BASE_URL = 'https://csbm-university-management-system.onrender.com/api';
 
 // Local Development Fallback
-// const LOCAL_IP = '192.168.1.102'; 
+// const LOCAL_IP = '192.168.1.23'; 
 // export const API_BASE_URL = Platform.OS === 'web' 
 //   ? 'http://localhost:8080/api' 
 //   : `http://${LOCAL_IP}:8080/api`;
