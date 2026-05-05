@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { 
   AlertCircle, Send, Phone, 
   Mail, ChevronRight, User, 
-  FileWarning, RefreshCw
+  FileWarning, RefreshCw, CheckCircle
 } from 'lucide-react-native';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';

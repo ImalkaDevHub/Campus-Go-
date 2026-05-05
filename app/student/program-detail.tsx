@@ -18,6 +18,7 @@ export default function ProgramDetail() {
   const { id } = useLocalSearchParams();
   const [course, setCourse] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Eligibility Checker States
   const [modalVisible, setModalVisible] = useState(false);
@@ -40,12 +41,20 @@ export default function ProgramDetail() {
   }, [id]);
 
   const fetchCourseDetail = async () => {
+    if (!id || id === 'undefined') {
+      console.error('Fetch Program Detail Error: Invalid ID passed', id);
+      setError('Invalid Program ID');
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
+      console.log('Fetching details for course ID:', id);
       const res = await axios.get(`${API_BASE_URL}/courses/${id}`);
       setCourse(res.data);
-    } catch (err) {
-      console.error('Fetch Program Detail Error:', err);
+    } catch (err: any) {
+      console.error('Fetch Program Detail Error for ID', id, ':', err.response?.data || err.message);
+      setError('Course not found or server error');
     } finally {
       setLoading(false);
     }
@@ -111,8 +120,13 @@ export default function ProgramDetail() {
   if (loading || !course) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Stack.Screen options={{ headerShown: true, headerTitle: 'Error', headerTransparent: true, headerLeft: () => (<TouchableOpacity onPress={() => router.back()} style={styles.backBtn}><ChevronLeft color="#fff" size={24} /></TouchableOpacity>) }} />
         <LinearGradient colors={['#0f172a', '#1e293b']} style={StyleSheet.absoluteFill} />
-        <ActivityIndicator size="large" color="#4F46E5" />
+        {loading ? (
+          <ActivityIndicator size="large" color="#4F46E5" />
+        ) : (
+          <Text style={{ color: '#ef4444', fontSize: 16 }}>{error || 'Course not found'}</Text>
+        )}
       </View>
     );
   }

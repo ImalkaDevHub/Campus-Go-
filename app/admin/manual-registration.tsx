@@ -48,8 +48,37 @@ export default function ManualRegistration() {
   };
 
   const handleRegister = async () => {
+    // Basic Required Fields
     if (!formData.fullName || !formData.email || !formData.courseId || !formData.amountPaid) {
       Alert.alert('Required Fields', 'Please fill in student name, email, course, and payment amount.');
+      return;
+    }
+
+    // Email Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
+    // Mobile Validation (Sri Lankan Format Example)
+    const mobileRegex = /^(?:\+94|0)?7[0-9]{8}$/;
+    if (formData.mobileNumber && !mobileRegex.test(formData.mobileNumber)) {
+      Alert.alert('Invalid Mobile', 'Please enter a valid mobile number (e.g., 0771234567).');
+      return;
+    }
+
+    // NIC Validation (Sri Lankan Format: 9 digits + V/X or 12 digits)
+    const nicRegex = /^(?:[0-9]{9}[vVxX]|[0-9]{12})$/;
+    if (formData.nic && !nicRegex.test(formData.nic)) {
+      Alert.alert('Invalid NIC', 'Please enter a valid NIC number.');
+      return;
+    }
+
+    // Amount Validation
+    const amount = parseFloat(formData.amountPaid);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Invalid Amount', 'Please enter a valid payment amount.');
       return;
     }
 
@@ -213,6 +242,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
+    paddingTop: 80,
   },
   section: {
     backgroundColor: '#1e293b',

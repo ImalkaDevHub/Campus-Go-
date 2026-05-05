@@ -47,6 +47,14 @@ export default function EligibilityCheckScreen() {
 
     try {
       setChecking(true);
+      
+      if (selectedCourseId === 'undefined') {
+        Alert.alert('Error', 'Invalid course selected. Please refresh the page.');
+        setChecking(false);
+        return;
+      }
+
+      console.log('Checking eligibility for course ID:', selectedCourseId);
       // Using the centralized ENDPOINTS constant to avoid 404s
       const response = await axios.post(`${ENDPOINTS.COURSES}/check-eligibility`, {
         courseId: String(selectedCourseId),
@@ -56,7 +64,7 @@ export default function EligibilityCheckScreen() {
       });
       setResult(response.data);
     } catch (error: any) {
-      console.error('Eligibility Check Error:', error.response?.data || error.message);
+      console.error('Eligibility Check Error for ID', selectedCourseId, ':', error.response?.data || error.message);
       const errorMsg = error.response?.data?.error || 'Failed to check eligibility. Please try again.';
       Alert.alert('Notice', errorMsg);
     } finally {

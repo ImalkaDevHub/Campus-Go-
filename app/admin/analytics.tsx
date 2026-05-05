@@ -34,13 +34,15 @@ export default function AnalyticsDashboard() {
       const [statsRes, trendsRes, incRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/analytics/dashboard`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/analytics/trends`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/applications?incomplete=true`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE_URL}/applications/all?status=UPDATES REQUESTED`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setStats(statsRes.data);
       setTrends(trendsRes.data);
       setIncomplete(incRes.data.slice(0, 5));
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      const msg = error.response?.data?.details || error.response?.data?.error || 'Unknown server error';
+      Alert.alert('Analytics Error', `Server returned: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -191,6 +193,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
+    paddingTop: 80,
   },
   statsGrid: {
     flexDirection: 'row',

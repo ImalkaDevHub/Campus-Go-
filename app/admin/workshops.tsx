@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Platform } from 'react-native';
+import { StyleSheet, View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Alert } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -35,6 +35,36 @@ export default function AdminWorkshopsDashboard() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const deleteWorkshop = async (workshopId: string) => {
+    Alert.alert(
+      'Delete Workshop',
+      'Are you sure you want to permanently remove this workshop and all its registrations?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const token = await getToken();
+              await axios.delete(`${API_BASE_URL}/workshops/${workshopId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              Alert.alert('Deleted', 'Workshop has been removed successfully.');
+              fetchData(); // Refresh list
+            } catch (error: any) {
+              console.error(error);
+              Alert.alert('Error', error.response?.data?.message || 'Failed to delete workshop');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const fetchData = async () => {
     try {
@@ -118,10 +148,17 @@ export default function AdminWorkshopsDashboard() {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionBtn}
-            onPress={() => router.push(`/admin/workshop-registrations/${item._id || item.id}`)}
+            onPress={() => router.push({ pathname: '/admin/workshop-registrations/attendance', params: { id: item._id || item.id } })}
           >
             <Users size={16} color="#06B6D4" />
             <Text style={[styles.actionBtnText, { color: '#06B6D4' }]}>Registrations</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionBtn}
+            onPress={() => deleteWorkshop(item._id || item.id)}
+          >
+            <Trash2 size={16} color="#ef4444" />
+            <Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Delete</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

@@ -35,7 +35,7 @@ export default function AdminApplicationsList() {
       setLoading(true);
       const token = await SecureStore.getItemAsync('userToken');
       const [appsRes, coursesRes] = await Promise.all([
-        axios.get(ENDPOINTS.APPLICATIONS, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${ENDPOINTS.APPLICATIONS}/all`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(ENDPOINTS.COURSES)
       ]);
       setApplications(appsRes.data);

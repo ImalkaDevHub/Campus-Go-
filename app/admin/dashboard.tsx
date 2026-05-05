@@ -82,8 +82,10 @@ export default function AdminDashboard() {
       });
 
       setRecentApps(allApps.slice(0, 5));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Admin Dashboard Load Error:', error);
+      const msg = error.response?.data?.details || error.response?.data?.error || 'Unknown server error';
+      Alert.alert('Dashboard Error', `Server returned: ${msg}`);
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -10,7 +10,7 @@ import {
   ChevronRight, Database 
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
@@ -47,7 +47,7 @@ export default function DataExportScreen() {
       const fileUri = FileSystem.documentDirectory + filename;
       
       // Write the actual data from the backend
-      await FileSystem.writeAsStringAsync(fileUri, csvData, { encoding: FileSystem.EncodingType.UTF8 });
+      await FileSystem.writeAsStringAsync(fileUri, csvData, { encoding: 'utf8' });
 
       Alert.alert('Report Ready', `The ${selectedType} report has been generated successfully.`, [
         { text: 'Share / Save File', onPress: () => Sharing.shareAsync(fileUri) },

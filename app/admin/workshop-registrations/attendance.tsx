@@ -18,15 +18,17 @@ const getToken = async () => {
 };
 
 export default function WorkshopRegistrations() {
-  const { id } = useLocalSearchParams();
-  const [registrations, setRegistrations] = useState([]);
+  const params = useLocalSearchParams();
+  const id = params.id;
+  
+  const [registrations, setRegistrations] = useState<any[]>([]);
   const [workshop, setWorkshop] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchData();
+    if (id) fetchData();
   }, [id]);
 
   const fetchData = async () => {
@@ -40,7 +42,7 @@ export default function WorkshopRegistrations() {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
-      setRegistrations(regRes.data);
+      setRegistrations(Array.isArray(regRes.data) ? regRes.data : []);
       setWorkshop(workshopRes.data);
     } catch (error) {
       console.error(error);
@@ -62,8 +64,8 @@ export default function WorkshopRegistrations() {
       });
 
       // Update local state
-      setRegistrations((prev: any) => 
-        prev.map((r: any) => r._id === regId ? { ...r, attendanceStatus: newStatus } : r)
+      setRegistrations((prev: any[]) => 
+        (prev || []).map((r: any) => r._id === regId ? { ...r, attendanceStatus: newStatus } : r)
       );
     } catch (error) {
       console.error(error);
@@ -71,7 +73,8 @@ export default function WorkshopRegistrations() {
     }
   };
 
-  const filteredData = registrations.filter((r: any) => 
+  const safeRegistrations = Array.isArray(registrations) ? registrations : [];
+  const filteredData = safeRegistrations.filter((r: any) => 
     r.studentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.referenceId?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -115,18 +118,18 @@ export default function WorkshopRegistrations() {
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Registrations</Text>
-              <Text style={styles.statVal}>{registrations.length}</Text>
+              <Text style={styles.statVal}>{safeRegistrations.length}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Present</Text>
               <Text style={[styles.statVal, { color: '#10b981' }]}>
-                {registrations.filter((r: any) => r.attendanceStatus === 'Present').length}
+                {safeRegistrations.filter((r: any) => r.attendanceStatus === 'Present').length}
               </Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Available</Text>
               <Text style={[styles.statVal, { color: '#4F46E5' }]}>
-                {workshop.totalSeats - registrations.length}
+                {(workshop.totalSeats || 0) - safeRegistrations.length}
               </Text>
             </View>
           </View>
@@ -167,146 +170,27 @@ export default function WorkshopRegistrations() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    padding: 24,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  workshopTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 20,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  statLabel: {
-    fontSize: 10,
-    color: '#64748b',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  statVal: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    height: 52,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  searchInput: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 14,
-    marginLeft: 12,
-  },
-  exportBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#1e293b',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  studentCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.03)',
-  },
-  cardMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  info: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  studentName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  metaText: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  refId: {
-    fontSize: 11,
-    color: '#4F46E5',
-    fontWeight: '800',
-    marginTop: 4,
-    letterSpacing: 1,
-  },
-  attendanceToggle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    gap: 4,
-    minWidth: 80,
-  },
-  presentBtn: {
-    backgroundColor: '#10b981',
-  },
-  attendanceText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#64748b',
-    textTransform: 'uppercase',
-  }
+  container: { flex: 1 },
+  header: { padding: 24, backgroundColor: 'rgba(15, 23, 42, 0.5)', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  workshopTitle: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 20 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  statBox: { flex: 1, backgroundColor: '#1e293b', borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  statLabel: { fontSize: 10, color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: 4 },
+  statVal: { fontSize: 18, fontWeight: '900', color: '#fff' },
+  searchContainer: { flexDirection: 'row', padding: 20, gap: 12 },
+  searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 14, paddingHorizontal: 16, height: 52, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  searchInput: { flex: 1, color: '#fff', fontSize: 14, marginLeft: 12 },
+  exportBtn: { width: 52, height: 52, borderRadius: 14, backgroundColor: '#1e293b', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  listContent: { paddingHorizontal: 20, paddingBottom: 40 },
+  studentCard: { backgroundColor: '#1e293b', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.03)' },
+  cardMain: { flexDirection: 'row', alignItems: 'center' },
+  avatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  info: { flex: 1, marginLeft: 16 },
+  studentName: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  metaText: { fontSize: 12, color: '#64748b', marginTop: 2 },
+  refId: { fontSize: 11, color: '#4F46E5', fontWeight: '800', marginTop: 4, letterSpacing: 1 },
+  attendanceToggle: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.2)', gap: 4, minWidth: 80 },
+  presentBtn: { backgroundColor: '#10b981' },
+  attendanceText: { fontSize: 10, fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }
 });

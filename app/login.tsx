@@ -82,7 +82,8 @@ export default function LoginScreen() {
       }
       
       setError(msg);
-      Alert.alert('Login Failed', msg);
+      const serverDetails = err.response?.data?.details || err.response?.data?.error || '';
+      Alert.alert('Login Failed', `${msg}${serverDetails ? '\n\nServer Details: ' + serverDetails : ''}`);
     } finally {
       setLoading(false);
     }

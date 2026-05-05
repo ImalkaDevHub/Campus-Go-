@@ -62,8 +62,9 @@ export default function WorkshopForm() {
       const data = response.data;
       setFormData({
         ...data,
-        totalSeats: data.totalSeats?.toString(),
-        price: data.price?.toString(),
+        agenda: Array.isArray(data.agenda) ? data.agenda : [],
+        totalSeats: data.totalSeats?.toString() || '50',
+        price: data.price?.toString() || '0',
       });
     } catch (error) {
       console.error(error);

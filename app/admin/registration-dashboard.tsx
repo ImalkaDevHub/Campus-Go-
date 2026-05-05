@@ -51,8 +51,10 @@ export default function RegistrationDashboard() {
       
       setStats(calculated);
       setRecentApps(apps.slice(0, 5));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration Stats Error:', error);
+      const msg = error.response?.data?.details || error.response?.data?.error || 'Unknown server error';
+      Alert.alert('Stats Error', `Server returned: ${msg}`);
     } finally {
       setLoading(false);
       setRefreshing(false);
