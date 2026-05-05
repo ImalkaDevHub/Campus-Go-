@@ -1,50 +1,104 @@
-# Welcome to your Expo app 👋
+# 📱 Campus-Go Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Campus-Go is the official mobile companion app for the CSBM Student Enrollment System.  
+Built using **React Native (Expo)** and **Firebase**, this app streamlines campus life by providing digital services for students.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Features
 
-   ```bash
-   npm install
-   ```
+- 🔐 Student Authentication (Login / Signup)
+- 🎓 Program Enrollment System
+- 📄 Document Upload (NIC / Birth Certificate)
+- 💳 Secure Payment Integration (Stripe)
+- 🎟️ QR Code-based Workshop Check-ins
+- 📱 Digital Student Wallet
+- 📅 Event & Workshop Management
+- ⚡ Real-time Data with Firebase
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🛠️ Tech Stack
 
-In the output, you'll find options to open the app in a
+- **Frontend:** React Native (Expo)
+- **Backend / BaaS:** Firebase (Auth, Firestore, Storage)
+- **Language:** TypeScript
+- **Navigation:** Expo Router (File-based routing)
+- **Payments:** Stripe API
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 📂 Project Structure
+Campus-Go/
+│── app/ # Main app screens (Expo Router)
+│── components/ # Reusable UI components
+│── assets/images/ # Images & static files
+│── config/ # Firebase & app configurations
+│── constants/ # Global constants
+│── hooks/ # Custom React hooks
+│── scripts/ # Utility scripts
+│── app.json # Expo configuration
+│── package.json # Dependencies
 
-## Get a fresh project
 
-When you're ready, run:
+---
+
+## ⚙️ Installation & Setup
+
+### 1️⃣ Clone the repository
 
 ```bash
-npm run reset-project
-```
+git clone https://github.com/your-username/Campus-Go.git
+cd Campus-Go
+npm install
+npx expo start
+📱 Run the App
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+You can open the app using:
 
-## Learn more
+📲 Expo Go (Mobile)
+🤖 Android Emulator
+🍎 iOS Simulator
+🔥 Firebase Setup
+Create a project in Firebase
+Enable:
+Authentication
+Firestore Database
+Storage
+Add your Firebase config inside:
+config/firebaseConfig.ts
+💳 Stripe Integration
+Add your Stripe Publishable Key
+Configure backend webhook (if using Node.js backend)
+🧪 Development Notes
+Uses file-based routing (Expo Router)
+Modular component structure
+Environment variables recommended for API keys
+📌 Future Improvements
+🔔 Push Notifications
+📊 Admin Dashboard
+🌐 Backend API with Node.js
+🧠 AI-based recommendations
+👨‍💻 Author
 
-To learn more about developing your project with Expo, look at the following resources:
+Imalka Dev Hub
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+📄 License
 
-## Join the community
+This project is licensed under the MIT License.
 
-Join our community of developers creating universal apps.
+⭐ Support
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+If you like this project, give it a ⭐ on GitHub!
+
+
+---
+
+### 🔥 Optional Improvements (if you want next level README)
+I can also add:
+- :contentReference[oaicite:0]{index=0}  
+- :contentReference[oaicite:1]{index=1}  
+- :contentReference[oaicite:2]{index=2}  
+- :contentReference[oaicite:3]{index=3}  
+
+Just tell me 👍
