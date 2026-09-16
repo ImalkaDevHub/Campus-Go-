@@ -1,5 +1,5 @@
 <div align="center">
-# 🎓 Campus‑Go
+ 🎓 Campus‑Go
  
 **Your campus, in your pocket.**
  
