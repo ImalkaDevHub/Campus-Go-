@@ -1,104 +1,115 @@
-# 📱 Campus-Go Mobile App
-
-Campus-Go is the official mobile companion app for the CSBM Student Enrollment System.  
-Built using **React Native (Expo)** and **Firebase**, this app streamlines campus life by providing digital services for students.
-
+<div align="center">
+# 🎓 Campus‑Go
+ 
+**Your campus, in your pocket.**
+ 
+The official mobile companion for the CSBM Student Enrollment System — enroll, pay, check in, and carry your student life on your phone.
+ 
+</div>
 ---
-
-## 🚀 Features
-
-- 🔐 Student Authentication (Login / Signup)
-- 🎓 Program Enrollment System
-- 📄 Document Upload (NIC / Birth Certificate)
-- 💳 Secure Payment Integration (Stripe)
-- 🎟️ QR Code-based Workshop Check-ins
-- 📱 Digital Student Wallet
-- 📅 Event & Workshop Management
-- ⚡ Real-time Data with Firebase
-
----
-
+ 
+## 📖 About
+ 
+Campus-Go turns the whole enrollment-to-graduation journey into something you can do from a bus queue. No more standing in line to submit a form, hunting for a payment slip, or fumbling for a physical ID at a workshop door — it's all one tap away.
+ 
+Built as a lightweight, native-feeling companion to the CSBM Student Enrollment System, it keeps students connected to their program, their documents, and their campus events in real time.
+ 
+## ✨ Features
+ 
+| | |
+|---|---|
+| 🔐 **Authentication** | Secure student login & signup |
+| 🎓 **Program Enrollment** | Apply and track enrollment status end-to-end |
+| 📄 **Document Upload** | Submit NIC / birth certificate straight from your camera roll |
+| 💳 **Payments** | Stripe-powered, secure fee payment |
+| 🎟️ **QR Check-ins** | Scan into workshops and events in seconds |
+| 📱 **Digital Student Wallet** | Your student identity, digitized |
+| 📅 **Event Management** | Never miss a workshop or campus event again |
+| ⚡ **Real-time Sync** | Firebase-backed, always up to date |
+ 
 ## 🛠️ Tech Stack
-
-- **Frontend:** React Native (Expo)
-- **Backend / BaaS:** Firebase (Auth, Firestore, Storage)
+ 
+- **Framework:** React Native (Expo)
 - **Language:** TypeScript
-- **Navigation:** Expo Router (File-based routing)
+- **Routing:** Expo Router (file-based)
+- **Backend:** Firebase (Authentication, Firestore, Storage)
 - **Payments:** Stripe API
-
----
-
 ## 📂 Project Structure
+ 
+```
 Campus-Go/
-│── app/ # Main app screens (Expo Router)
-│── components/ # Reusable UI components
-│── assets/images/ # Images & static files
-│── config/ # Firebase & app configurations
-│── constants/ # Global constants
-│── hooks/ # Custom React hooks
-│── scripts/ # Utility scripts
-│── app.json # Expo configuration
-│── package.json # Dependencies
-
-
----
-
-## ⚙️ Installation & Setup
-
-### 1️⃣ Clone the repository
-
+├── app/               # App screens (Expo Router — file-based routing)
+├── components/        # Reusable UI components
+├── assets/
+│   └── images/        # Images & static files
+├── config/            # Firebase & app configuration
+├── constants/         # Global constants
+├── hooks/             # Custom React hooks
+├── scripts/           # Utility scripts
+├── app.json           # Expo configuration
+└── package.json       # Dependencies
+```
+ 
+## 🚀 Getting Started
+ 
+### Prerequisites
+- Node.js & npm
+- Expo CLI (`npm install -g expo-cli`)
+- A Firebase project
+- A Stripe account
+### 1. Clone & Install
+ 
 ```bash
 git clone https://github.com/your-username/Campus-Go.git
 cd Campus-Go
 npm install
+```
+ 
+### 2. Configure Firebase
+ 
+Create a Firebase project and enable:
+- Authentication
+- Firestore Database
+- Storage
+Then drop your config into `config/firebaseConfig.ts`.
+ 
+### 3. Configure Stripe
+ 
+Add your Stripe **publishable key** to your environment variables, and set up your backend webhook if you're running a Node.js payment backend.
+ 
+### 4. Run It
+ 
+```bash
 npx expo start
-📱 Run the App
-
-You can open the app using:
-
-📲 Expo Go (Mobile)
-🤖 Android Emulator
-🍎 iOS Simulator
-🔥 Firebase Setup
-Create a project in Firebase
-Enable:
-Authentication
-Firestore Database
-Storage
-Add your Firebase config inside:
-config/firebaseConfig.ts
-💳 Stripe Integration
-Add your Stripe Publishable Key
-Configure backend webhook (if using Node.js backend)
-🧪 Development Notes
-Uses file-based routing (Expo Router)
-Modular component structure
-Environment variables recommended for API keys
-📌 Future Improvements
-🔔 Push Notifications
-📊 Admin Dashboard
-🌐 Backend API with Node.js
-🧠 AI-based recommendations
-👨‍💻 Author
-
-Imalka Dev Hub
-
-📄 License
-
-This project is licensed under the MIT License.
-
-⭐ Support
-
-If you like this project, give it a ⭐ on GitHub!
-
-
+```
+ 
+Open it in:
+- 📲 Expo Go (physical device)
+- 🤖 Android Emulator
+- 🍎 iOS Simulator
+## 🧪 Development Notes
+ 
+- File-based routing via Expo Router — add a screen, get a route
+- Modular, reusable component structure
+- Keep API keys in environment variables, never hardcoded
+## 📌 Roadmap
+ 
+- [ ] Push notifications
+- [ ] Admin dashboard
+- [ ] Standalone Node.js backend API
+- [ ] AI-based recommendations
+## 👨‍💻 Author
+ 
+**Imalka Dev Hub**
+ 
+## 📄 License
+ 
+Licensed under the [MIT License](LICENSE).
+ 
 ---
-
-### 🔥 Optional Improvements (if you want next level README)
-I can also add:
-- :contentReference[oaicite:0]{index=0}  
-- :contentReference[oaicite:1]{index=1}  
-- :contentReference[oaicite:2]{index=2}  
-- :contentReference[oaicite:3]{index=3}  
-
-Just tell me 👍
+ 
+<div align="center">
+If Campus-Go made your campus life easier, consider giving it a ⭐
+ 
+</div>
+ 
