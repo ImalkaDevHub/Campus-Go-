@@ -6,7 +6,7 @@
 The official mobile companion for the CSBM Student Enrollment System — enroll, pay, check in, and carry your student life on your phone.
  
 </div>
----
+
  
 ## 📖 About
  
